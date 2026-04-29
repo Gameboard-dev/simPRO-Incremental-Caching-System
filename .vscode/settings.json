@@ -1,0 +1,9 @@
+{
+  "files.exclude": {
+    "**/mod.rs": false,
+    "**/.env.example": true,
+    "**/ngrok.yml.example": true,
+    "diesel.toml": true
+  },
+  "explorer.sortOrder": "type"
+}

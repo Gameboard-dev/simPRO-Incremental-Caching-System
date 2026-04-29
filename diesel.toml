@@ -1,0 +1,6 @@
+[print_schema]
+file = "src/db/table.rs"
+with_docs = false
+column_sorting = "name"
+allow_tables_to_appear_in_same_query_config = "fk_related_tables"
+filter = { except_tables = ["__diesel_schema_migrations"] }

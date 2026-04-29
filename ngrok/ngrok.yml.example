@@ -1,0 +1,12 @@
+version: "3"
+
+agent:
+  # https://dashboard.ngrok.com/get-started/setup/
+  authtoken:
+
+endpoints:
+  - name: 
+    url:
+    upstream:
+      url: http://localhost:3000
+    

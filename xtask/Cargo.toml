@@ -1,0 +1,11 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+dotenvy = "0.15"
+sqlparser = "0.61"
+syn = { version = "2", features = ["full", "visit", "visit-mut", "printing"] }
+prettyplease = "0.2"
