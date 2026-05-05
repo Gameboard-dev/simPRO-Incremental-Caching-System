@@ -115,12 +115,9 @@ mod api {
         // `syn` checks that the tokens form valid Rust and builds a syntax tree from the tokens.
         let syntax_tree: syn::File = syn::parse2(tokens)?;
         // `prettyplease`` parses the syntax tree back into readable source code before `src/api.rs` is written to disk.
-        let contents: String =
-            prettyplease::unparse(&syntax_tree);
+        let contents: String = prettyplease::unparse(&syntax_tree);
         fs::write(API_RS, contents)?;
-        println!(
-            "cargo:info=Generated API written to '{API_RS}'"
-        );
+        println!("cargo:info=Generated API written to '{API_RS}'");
         Ok(())
     }
 }

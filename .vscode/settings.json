@@ -1,9 +1,10 @@
 {
   "files.exclude": {
-    "**/mod.rs": false,
+    "**/mod.rs": true,
     "**/.env.example": true,
     "**/ngrok.yml.example": true,
-    "diesel.toml": true
+    "diesel.toml": true,
+    "openapitools.json": true
   },
   "explorer.sortOrder": "type"
 }
