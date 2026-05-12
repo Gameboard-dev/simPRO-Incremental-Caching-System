@@ -14,6 +14,9 @@
 ### API Preprocessing
 
 ```sh
+# Open the current directory in Ubuntu (WSL2)
+wsl -d Ubuntu
+
 # Acquire and unzip the official simPRO `swagger.json` (API)
 bash scripts/acquire.sh
 
@@ -40,7 +43,7 @@ docker run --rm \
 
 ### SQL (Database Accessor) Synchronization
 
-The project can auto-generate diesel database accessors in `src/db.rs` 
+The project can regenerate diesel database accessors in `src/db.rs` 
 whenever the schema (`init.sql`) changes.
 
 ```sh
@@ -61,3 +64,55 @@ whenever the specification (`openapi.yaml`) changes.
 cargo build
 ```
 
+### PostgreSQL Binaries
+
+Diesel’s PostgreSQL backend depends on the native PostgreSQL client library (libpq).
+
+In Docker environments this is handled automatically, but on Windows you need to install PostgreSQL binaries and expose them on LIB and PATH.
+
+Binaries can be obtained from:
+https://www.enterprisedb.com/download-postgresql-binaries
+
+```sh
+$env:LIB="<PATH_TO>\lib;$env:LIB"
+$env:PATH="<PATH_TO>\bin;$env:PATH"
+```
+
+## Environment Variables
+
+#### SIMPRO_API_KEY
+
+API key used to authenticate requests to the simPRO API.
+
+Create an API application and generate an API key from the simPRO API settings:
+
+[simPRO Authentication Documentation](https://developer.simprogroup.com/apidoc/?page=3366d2ea7906f693b27d57ed9cca3acb#tag/How-to-authenticate)
+
+#### SIMPRO_DOMAIN
+
+Your simPRO tenant domain. Example:
+
+```yaml
+SIMPRO_DOMAIN=grainconnect.simprosuite.com
+```
+
+#### SIMPRO_WEBHOOK_SECRET
+
+Shared secret used to verify webhook signatures from simPRO.
+
+This value must match the webhook subscription secret configured in simPRO webhook settings.
+
+[simPRO Webhook Documentation](https://developer.simprogroup.com/apidoc/?page=cd8682773ab1b07fdc9661984e281ce3#tag/Web-Hooks)
+
+### Local Development
+
+```sh
+wsl -d Ubuntu
+
+docker compose --profile dev up --build
+```
+
+To ensure Ngrok is listening, visit the following URL:
+```
+http://localhost:4040/inspect/http
+```

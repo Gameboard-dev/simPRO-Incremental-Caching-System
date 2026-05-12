@@ -1002,8 +1002,7 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
-    ///    "ID",
-    ///    "Name"
+    ///    "ID"
     ///  ],
     ///  "properties": {
     ///    "ID": {
@@ -1020,8 +1019,12 @@ pub mod types {
     pub struct Staff {
         #[serde(rename = "ID")]
         pub id: ::std::string::String,
-        #[serde(rename = "Name")]
-        pub name: ::std::string::String,
+        #[serde(
+            rename = "Name",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub name: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&Staff> for Staff {
         fn from(value: &Staff) -> Self {
@@ -2405,13 +2408,16 @@ pub mod types {
         #[derive(Clone, Debug)]
         pub struct Staff {
             id: ::std::result::Result<::std::string::String, ::std::string::String>,
-            name: ::std::result::Result<::std::string::String, ::std::string::String>,
+            name: ::std::result::Result<
+                ::std::option::Option<::std::string::String>,
+                ::std::string::String,
+            >,
         }
         impl ::std::default::Default for Staff {
             fn default() -> Self {
                 Self {
                     id: Err("no value supplied for id".to_string()),
-                    name: Err("no value supplied for name".to_string()),
+                    name: Ok(Default::default()),
                 }
             }
         }
@@ -2430,7 +2436,7 @@ pub mod types {
             }
             pub fn name<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<::std::option::Option<::std::string::String>>,
                 T::Error: ::std::fmt::Display,
             {
                 self.name = value
@@ -4575,4 +4581,81 @@ pub mod builder {
 /// Items consumers will typically use such as the Client.
 pub mod prelude {
     pub use self::super::Client;
+}
+pub trait Columns {
+    const COLUMNS: &'static [&'static str];
+}
+impl Columns for types::Activity {
+    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+}
+impl Columns for types::Address {
+    const COLUMNS: &'static [&'static str] = &[
+        "Address",
+        "City",
+        "Country",
+        "PostalCode",
+    ];
+}
+impl Columns for types::CostCenter {
+    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+}
+impl Columns for types::Customer {
+    const COLUMNS: &'static [&'static str] = &["CompanyName", "ID"];
+}
+impl Columns for types::Employee {
+    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+}
+impl Columns for types::Job {
+    const COLUMNS: &'static [&'static str] = &[
+        "Customer",
+        "DateModified",
+        "ID",
+        "Name",
+        "Reference",
+        "Site",
+        "Stage",
+        "Status",
+        "Type",
+    ];
+}
+impl Columns for types::JobSite {
+    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+}
+impl Columns for types::JobStatus {
+    const COLUMNS: &'static [&'static str] = &["Color", "ID", "Name"];
+}
+impl Columns for types::Lead {
+    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+}
+impl Columns for types::Quote {
+    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+}
+impl Columns for types::Schedule {
+    const COLUMNS: &'static [&'static str] = &[
+        "Blocks",
+        "Date",
+        "DateModified",
+        "ID",
+        "Name",
+        "Notes",
+        "Reference",
+        "Staff",
+        "Type",
+    ];
+}
+impl Columns for types::ScheduleBlock {
+    const COLUMNS: &'static [&'static str] = &[
+        "ISO8601EndTime",
+        "ISO8601StartTime",
+        "ScheduleRate",
+    ];
+}
+impl Columns for types::ScheduleRate {
+    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+}
+impl Columns for types::Site {
+    const COLUMNS: &'static [&'static str] = &["Address", "DateModified", "ID", "Name"];
+}
+impl Columns for types::Staff {
+    const COLUMNS: &'static [&'static str] = &["ID"];
 }

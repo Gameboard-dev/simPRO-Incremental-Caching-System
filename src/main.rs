@@ -1,12 +1,17 @@
+//! * https://github.com/diesel-rs/diesel
+//! * https://github.com/oxidecomputer/progenitor
+
 #![allow(unused)]
 #![allow(unused_lifetimes)]
 pub(crate) mod api;
 pub(crate) mod db;
-pub(crate) mod webhook;
 pub(crate) mod r#macro;
 pub(crate) mod parse;
+pub(crate) mod webhook;
+pub(crate) mod bin;
 use crate::webhook::events::{Buffer, EventBuffer};
 use crate::webhook::handler::webhook_handler;
+use anyhow::Context;
 pub use api::Client as ApiClient;
 use axum::{Router, routing::post};
 use diesel::PgConnection;
@@ -14,9 +19,7 @@ use diesel::r2d2::{self, ConnectionManager};
 use dotenvy::dotenv;
 use reqwest::Client as HttpClient;
 use reqwest::header::{AUTHORIZATION, HeaderMap};
-use reqwest_middleware::{
-    ClientBuilder, ClientWithMiddleware,
-};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use retry_policies::Jitter;
 use retry_policies::policies::ExponentialBackoff;
@@ -25,46 +28,37 @@ use std::{env, net::SocketAddr, time::Duration};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 
-pub type DbPool =
-    r2d2::Pool<ConnectionManager<PgConnection>>;
+pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-// https://github.com/diesel-rs/diesel
-// https://github.com/oxidecomputer/progenitor
+/// Reads a required environment variable.
+/// * Returns a contextualized error if the variable is not present.
+pub(crate) fn require_env(name: &str) -> anyhow::Result<String> {
+    env::var(name).with_context(|| format!("{name} is missing from .env or the environment"))
+}
 
 /// Builds a new Progenitor API `Client`
 fn build_api_client() -> anyhow::Result<ApiClient> {
-    let base_url = env::var("API_URL")?;
-    let access_token = env::var("API_ACCESS_TOKEN")?;
     let mut headers = HeaderMap::new();
-    headers.insert(
-        AUTHORIZATION,
-        format!("Bearer {access_token}").parse()?,
-    );
+    headers.insert(AUTHORIZATION, format!("Bearer {}", require_env("SIMPRO_API_KEY")?).parse()?);
     let http_client = HttpClient::builder()
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(60))
         .default_headers(headers)
         .build()?;
     let retry_policy = ExponentialBackoff::builder()
-        .retry_bounds(
-            Duration::from_millis(250),
-            Duration::from_secs(10),
-        )
+        .retry_bounds(Duration::from_millis(250), Duration::from_secs(10))
         .jitter(Jitter::Bounded)
         .base(2)
         .build_with_max_retries(3);
-    let middleware_client: ClientWithMiddleware =
-        ClientBuilder::new(http_client)
-            .with(
-                RetryTransientMiddleware::new_with_policy(
-                    retry_policy,
-                ),
-            )
-            .build();
-    Ok(ApiClient::new_with_client(
-        &base_url,
-        middleware_client,
-    ))
+    let middleware_client: ClientWithMiddleware = ClientBuilder::new(http_client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build();
+    let base_url = format!(
+        "https://{}/api/v1.0/companies/{}/",
+        require_env("SIMPRO_DOMAIN")?,
+        require_env("SIMPRO_COMPANY_ID")?
+    );
+    Ok(ApiClient::new_with_client(&base_url, middleware_client))
 }
 
 fn init_tracing(level: &str) {
@@ -86,24 +80,19 @@ pub struct AppState {
     pub db_connection_pool: DbPool,
 }
 
-pub fn build_app_state(
-    api: ApiClient,
-) -> anyhow::Result<AppState> {
+pub fn build_app_state(api: ApiClient) -> anyhow::Result<AppState> {
     Ok(AppState {
         api: api,
-        webhook_secret: env::var("WEBHOOK_SECRET")?,
+        webhook_secret: require_env("SIMPRO_WEBHOOK_SECRET")?,
         webhook_events: EventBuffer::default(),
-        db_connection_pool: r2d2::Pool::builder().build(
-            ConnectionManager::<PgConnection>::new(
-                env::var("DATABASE_URL")?,
-            ),
-        )?,
+        db_connection_pool: r2d2::Pool::builder()
+            .build(ConnectionManager::<PgConnection>::new(require_env("DATABASE_URL")?))?,
     })
 }
 
 async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
     // ----------------------------------------------------------------------------
-    let address: String = env::var("APP_ADDRESS")?;
+    let address: String = require_env("LISTEN_ADDRESS")?;
     let address: SocketAddr = address.parse()?;
     // ----------------------------------------------------------------------------
     tracing::info!("Listening on http://{address}");
@@ -120,21 +109,26 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn sync(state: Arc<AppState>, minutes: Duration) {
+async fn sync(state: Arc<AppState>, seconds: Duration) {
     use tokio::time::{Interval, interval};
     // ------------------------------------------------------
-    let mut timer: Interval = interval(minutes);
+    let mut timer: Interval = interval(seconds);
     // ------------------------------------------------------
     tokio::spawn(async move {
         loop {
             timer.tick().await;
             // -----------------------------------------------------------------------------
-            let events: Buffer =
-                state.webhook_events.drain();
+            // -- Every N seconds 
+            // -- Use mem::take to acquire [Vec<u64>; {const}]
+            // -- These are record IDs indexed by Resource and Operation
+            let events: Buffer = state.webhook_events.drain();
             // ---------------------------------------------------------------------------
+            // -- Enumerate over Record IDs and decipher reverse index (Resource and Operation)
             for (i, ids) in events.into_iter().enumerate() {
-                let (resource, operation) =
-                    EventBuffer::reverse_index(i);
+                let (resource, operation) = EventBuffer::reverse_index(i);
+                // -- Use the API GET method of the enum variant to retrieve the corresponding records from simPRO
+                // -- Upsert the records into the database
+
             }
         }
     });
@@ -145,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
     // ------------------------------------------------------
     dotenv().ok();
     // ------------------------------------------------------
-    init_tracing(&env::var("LOG_LEVEL")?);
+    init_tracing(&require_env("RUST_LOG_LEVEL")?);
     // ------------------------------------------------------
     let client: ApiClient = build_api_client()?;
     // ------------------------------------------------------
@@ -154,10 +148,9 @@ async fn main() -> anyhow::Result<()> {
     // ------------------------------------------------------
     serve(app_state.clone()).await?;
     // ------------------------------------------------------
-    let minutes: u64 = env::var("DATABASE_SYNC_INTERVAL")?
-        .parse::<u64>()?;
+    let seconds: u64 = require_env("DATABASE_SYNC_INTERVAL")?.parse::<u64>()?;
     // ------------------------------------------------------
-    sync(app_state, Duration::from_mins(minutes)).await;
+    sync(app_state, Duration::from_secs(seconds)).await;
     // ------------------------------------------------------
     Ok(())
 }

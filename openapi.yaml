@@ -38,7 +38,7 @@ paths:
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
       - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/limit' 
       summary: List all employees.
       description: List all employees.
       responses:
@@ -331,7 +331,6 @@ components:
       type: object
       required:
         - ID
-        - Name
       properties:
         ID:
           type: string

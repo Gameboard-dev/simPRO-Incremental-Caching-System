@@ -15,7 +15,7 @@ use std::{
 };
 
 /// PostgreSQL image used.
-pub(crate) const POSTGRES_IMAGE: &str = "postgres:16-alpine";
+pub(crate) const POSTGRES_IMAGE: &str = "postgres:18";
 
 /// Name of the PostgreSQL container.
 pub(crate) const POSTGRES_CONTAINER: &str = "simpro-schema-db";

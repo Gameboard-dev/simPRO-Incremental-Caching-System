@@ -1745,6 +1745,7 @@ dependencies = [
  "proc-macro2",
  "progenitor-middleware",
  "progenitor-middleware-client",
+ "quote",
  "r2d2",
  "reqwest",
  "reqwest-middleware",
