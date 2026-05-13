@@ -10,7 +10,7 @@ pub enum Resource {
     Employee = 4,
     CostCenter = 5,
     Quote = 6,
-    Lead = 7
+    Lead = 7,
 }
 
 #[repr(u8)]

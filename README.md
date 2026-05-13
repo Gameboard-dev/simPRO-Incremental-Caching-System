@@ -46,6 +46,9 @@ docker run --rm \
 The project can regenerate diesel database accessors in `src/db.rs` 
 whenever the schema (`init.sql`) changes.
 
+Make sure these commands run in an environment with Docker available.
+To enter WSL2 Ubuntu to run these commands on Windows use `wsl -d Ubuntu`.
+
 ```sh
 cargo install cargo-watch
 ```
@@ -70,12 +73,24 @@ Diesel’s PostgreSQL backend depends on the native PostgreSQL client library (l
 
 In Docker environments this is handled automatically, but on Windows you need to install PostgreSQL binaries and expose them on LIB and PATH.
 
+### Windows
+
 Binaries can be obtained from:
 https://www.enterprisedb.com/download-postgresql-binaries
+
+Then add the following environment variables to your path:
 
 ```sh
 $env:LIB="<PATH_TO>\lib;$env:LIB"
 $env:PATH="<PATH_TO>\bin;$env:PATH"
+```
+
+### Windows WSL2 Ubuntu
+
+In Ubuntu WSL on Windows run the following command to install PostgreSQL's client library, `libpq`:
+
+```bash
+sudo apt install libpq-dev pkg-config build-essential
 ```
 
 ## Environment Variables
@@ -107,8 +122,6 @@ This value must match the webhook subscription secret configured in simPRO webho
 ### Local Development
 
 ```sh
-wsl -d Ubuntu
-
 docker compose --profile dev up --build
 ```
 

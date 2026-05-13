@@ -5,17 +5,16 @@
 #![allow(unused_lifetimes)]
 pub(crate) mod api;
 pub(crate) mod db;
-pub(crate) mod r#macro;
 pub(crate) mod parse;
+pub(crate) mod records;
 pub(crate) mod webhook;
-pub(crate) mod bin;
 use crate::webhook::events::{Buffer, EventBuffer};
 use crate::webhook::handler::webhook_handler;
 use anyhow::Context;
 pub use api::Client as ApiClient;
 use axum::{Router, routing::post};
 use diesel::PgConnection;
-use diesel::r2d2::{self, ConnectionManager};
+use diesel::r2d2::{ConnectionManager, PooledConnection};
 use dotenvy::dotenv;
 use reqwest::Client as HttpClient;
 use reqwest::header::{AUTHORIZATION, HeaderMap};
@@ -39,7 +38,10 @@ pub(crate) fn require_env(name: &str) -> anyhow::Result<String> {
 /// Builds a new Progenitor API `Client`
 fn build_api_client() -> anyhow::Result<ApiClient> {
     let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, format!("Bearer {}", require_env("SIMPRO_API_KEY")?).parse()?);
+    headers.insert(
+        AUTHORIZATION,
+        format!("Bearer {}", require_env("SIMPRO_API_KEY")?).parse()?,
+    );
     let http_client = HttpClient::builder()
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(60))
@@ -78,6 +80,7 @@ pub struct AppState {
     pub webhook_secret: String,
     pub webhook_events: EventBuffer,
     pub db_connection_pool: DbPool,
+    sync_threshold: usize,
 }
 
 pub fn build_app_state(api: ApiClient) -> anyhow::Result<AppState> {
@@ -85,6 +88,7 @@ pub fn build_app_state(api: ApiClient) -> anyhow::Result<AppState> {
         api: api,
         webhook_secret: require_env("SIMPRO_WEBHOOK_SECRET")?,
         webhook_events: EventBuffer::default(),
+        sync_threshold: require_env("SYNC_THRESHOLD")?.parse::<usize>()?,
         db_connection_pool: r2d2::Pool::builder()
             .build(ConnectionManager::<PgConnection>::new(require_env("DATABASE_URL")?))?,
     })
@@ -109,29 +113,51 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn sync(state: Arc<AppState>, seconds: Duration) {
+/// This executes a single synchronization pipeline.
+///
+/// Buffered webhook events are drained and grouped by `(Resource, Operation)`.
+///
+/// The corresponding simPRO records are then:
+/// 1. Retrieved from the simPRO API using the resource-specific GET endpoint
+/// 2. Hydrated into strongly typed API models
+/// 3. Translated into Diesel insertable structs
+/// 4. Upserted into the local PostgreSQL database
+///
+async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
+    use crate::records::hydrate::Records;
+    // --------------------------------------------------------
+    let events: Buffer = app.webhook_events.drain();
+    // --------------------------------------------------------
+    for (i, record_ids) in events.into_iter().enumerate() {
+        if !record_ids.is_empty() {
+            let (resource, operation) = EventBuffer::reverse_index(i);
+            let records: Records = resource.get_records(&record_ids, app.clone()).await?;
+            resource.upsert_records(records, &mut app.db_connection_pool.get()?)?;
+        }
+    }
+    Ok(())
+}
+
+/// Begins the background webhook synchronization worker.
+///
+/// Runs [sync_once] every N `seconds`.
+///
+/// This runs continuously in the background using `tokio::spawn`.
+///
+/// Errors during synchronization are logged and do not terminate the worker.
+async fn start_sync(app: Arc<AppState>, seconds: Duration) -> anyhow::Result<()> {
     use tokio::time::{Interval, interval};
-    // ------------------------------------------------------
     let mut timer: Interval = interval(seconds);
-    // ------------------------------------------------------
+    // --------------------------------------------------------
     tokio::spawn(async move {
         loop {
-            timer.tick().await;
-            // -----------------------------------------------------------------------------
-            // -- Every N seconds 
-            // -- Use mem::take to acquire [Vec<u64>; {const}]
-            // -- These are record IDs indexed by Resource and Operation
-            let events: Buffer = state.webhook_events.drain();
-            // ---------------------------------------------------------------------------
-            // -- Enumerate over Record IDs and decipher reverse index (Resource and Operation)
-            for (i, ids) in events.into_iter().enumerate() {
-                let (resource, operation) = EventBuffer::reverse_index(i);
-                // -- Use the API GET method of the enum variant to retrieve the corresponding records from simPRO
-                // -- Upsert the records into the database
-
+            if let Err(err) = sync_once(app.clone()).await {
+                tracing::error!(?err, "Webhook synchronization failed");
             }
+            timer.tick().await;
         }
     });
+    Ok(())
 }
 
 #[tokio::main]
@@ -150,7 +176,7 @@ async fn main() -> anyhow::Result<()> {
     // ------------------------------------------------------
     let seconds: u64 = require_env("DATABASE_SYNC_INTERVAL")?.parse::<u64>()?;
     // ------------------------------------------------------
-    sync(app_state, Duration::from_secs(seconds)).await;
+    start_sync(app_state, Duration::from_secs(seconds)).await;
     // ------------------------------------------------------
     Ok(())
 }

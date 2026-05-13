@@ -44,7 +44,7 @@ impl PostgresConfig {
             root,
             db_user: require_env("POSTGRES_USER")?,
             db_password: require_env("POSTGRES_PASSWORD")?,
-            db_name: require_env("POSTGRES_DB")?,
+            db_name: require_env("DATABASE_NAME")?,
         })
     }
 

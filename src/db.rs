@@ -28,6 +28,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    company_customers (id) {
+        company_name -> Text,
+        id -> Int8,
+    }
+}
+
+diesel::table! {
     cost_centers (id) {
         id -> Int8,
         name -> Text,
@@ -62,7 +69,7 @@ diesel::table! {
     use super::sql_types::JobType;
 
     jobs (id) {
-        customer_company_name -> Text,
+        customer_id -> Int8,
         date_modified -> Timestamptz,
         description -> Text,
         id -> Int8,
@@ -149,6 +156,7 @@ diesel::joinable!(activity_schedules -> schedules (schedule_id));
 diesel::joinable!(job_schedules -> cost_centers (cost_center_id));
 diesel::joinable!(job_schedules -> jobs (job_id));
 diesel::joinable!(job_schedules -> schedules (schedule_id));
+diesel::joinable!(jobs -> company_customers (customer_id));
 diesel::joinable!(jobs -> job_statuses (status_id));
 diesel::joinable!(jobs -> sites (site_id));
 diesel::joinable!(lead_schedules -> leads (lead_id));
@@ -161,7 +169,7 @@ diesel::joinable!(schedule_blocks -> schedules (schedule_id));
 diesel::joinable!(schedules -> employees (staff_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    activities,activity_schedules,cost_centers,employees,job_schedules,job_statuses,jobs,lead_schedules,leads,quote_schedules,quotes,schedule_blocks,schedule_rates,schedules,sites,);
+    activities,activity_schedules,company_customers,cost_centers,employees,job_schedules,job_statuses,jobs,lead_schedules,leads,quote_schedules,quotes,schedule_blocks,schedule_rates,schedules,sites,);
 
 }
 
@@ -218,6 +226,13 @@ pub struct ActivitySchedule {
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = company_customers)]
+pub struct CompanyCustomer {
+    pub company_name: String,
+    pub id: i64,
+}
+
+#[derive(Debug, Clone, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = cost_centers)]
 pub struct CostCenter {
     pub id: i64,
@@ -251,7 +266,7 @@ pub struct JobStatuse {
 #[derive(Debug, Clone, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = jobs)]
 pub struct Job {
-    pub customer_company_name: String,
+    pub customer_id: i64,
     pub date_modified: DateTime<Utc>,
     pub description: String,
     pub id: i64,
@@ -357,6 +372,12 @@ pub struct NewActivitySchedule {
     pub schedule_id: i64,
 }
 #[derive(Insertable)]
+#[diesel(table_name = company_customers)]
+pub struct NewCompanyCustomer<'a> {
+    pub company_name: &'a str,
+    pub id: i64,
+}
+#[derive(Insertable)]
 #[diesel(table_name = cost_centers)]
 pub struct NewCostCenter<'a> {
     pub id: i64,
@@ -385,7 +406,7 @@ pub struct NewJobStatuse<'a> {
 #[derive(Insertable)]
 #[diesel(table_name = jobs)]
 pub struct NewJob<'a> {
-    pub customer_company_name: &'a str,
+    pub customer_id: i64,
     pub date_modified: DateTime<Utc>,
     pub description: &'a str,
     pub id: i64,

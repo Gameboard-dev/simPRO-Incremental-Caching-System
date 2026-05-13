@@ -18,8 +18,7 @@ filter:
     Staff: [ID, Name, Position]
     Employee: [ID, Name, Position]
     Activity: [ID, Name]
-    Job: [ID, Description, Name, Customer, Site, Stage, Status, Type, 
-        DateModified]
+    Job: [ID, Description, Name, Customer, Site, Stage, Status, Type, DateModified]
     Site: [ID, Name, Address, DateModified]
     CostCenter: [ID, Name, Section, DateModified]
     Customer: [ID, CompanyName, DateModified]

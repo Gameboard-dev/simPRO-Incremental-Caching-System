@@ -71,6 +71,8 @@ pub(crate) fn build_tools_image(root: &Path) -> anyhow::Result<()> {
         println!("Diesel tools image already exists (use `cargo run -p xtask -- rebuild` to refresh).");
         return Ok(());
     }
+    which::which("docker").context("Could not find `docker` on PATH.")?;
+    // ----------------------------------------------
     run(
         Command::new("docker").current_dir(root).args([
             "build",

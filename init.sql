@@ -49,9 +49,14 @@ CREATE TYPE job_type AS ENUM (
     'Prepaid'
 );
 
+CREATE TABLE company_customers (
+    id BIGINT PRIMARY KEY,
+    company_name TEXT NOT NULL
+);
+
 CREATE TABLE jobs (
     id BIGINT PRIMARY KEY,
-    customer_company_name TEXT NOT NULL,
+    customer_id BIGINT NOT NULL REFERENCES company_customers (id),
     date_modified TIMESTAMP WITH TIME ZONE NOT NULL,
     description TEXT NOT NULL,
     name TEXT NOT NULL,

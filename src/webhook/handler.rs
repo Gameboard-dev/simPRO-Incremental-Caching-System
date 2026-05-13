@@ -7,12 +7,12 @@ use axum::{body::Bytes, extract::State, http::HeaderMap};
 use hmac::{Hmac, Mac};
 use reqwest::StatusCode;
 use sha1::Sha1;
-use std::sync::Arc;
+use std::sync::{self, Arc};
 use tracing::instrument;
 
 /// ---------------------------------------------------------------
 /// Axum route endpoint executed under a `TraceLayer` span
-/// for HTTP observability.
+/// for HTTP disambiguation.
 ///
 /// Uses a fallible closure returning `anyhow::Result`
 /// to unify signature verification and parsing errors.
@@ -21,7 +21,6 @@ use tracing::instrument;
 /// and buffers the resource ID for retrieval using the simPRO API.
 ///
 /// Errors are logged via tracing and return `400 BAD_REQUEST`.
-///
 #[instrument(skip(app, headers, body))]
 pub async fn webhook_handler(State(app): State<Arc<AppState>>, headers: HeaderMap, body: Bytes) -> StatusCode {
     match (|| -> anyhow::Result<_> {
@@ -30,7 +29,14 @@ pub async fn webhook_handler(State(app): State<Arc<AppState>>, headers: HeaderMa
     })() {
         Ok((resource, operation, id)) => {
             // --------------------------------------------------------
-            app.webhook_events.acquire_lock()[EventBuffer::index(resource, operation)].push(id);
+            let mut webhook_events = app.webhook_events.acquire_lock();
+            let index: usize = EventBuffer::index(resource, operation);
+            webhook_events[index].push(id);
+            // --------------------------------------------------------
+            if (webhook_events[index].len() > app.sync_threshold) {
+                let handle = app.clone();
+                crate::sync_once(handle);
+            }
             // --------------------------------------------------------
             #[cfg(debug_assertions)]
             tracing::debug!(pair = ?(resource, operation), "Pushed");
