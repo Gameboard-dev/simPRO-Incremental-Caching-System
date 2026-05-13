@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{AppState, api::types as api, parse::reference::IDs, webhook::variants::Resource};
 
-/// Enumerate records returned by API endpoints
+/// Enum of records returned by API endpoints
 #[derive(Debug)]
 pub(crate) enum Records {
     Schedule(Vec<api::Schedule>),
@@ -22,7 +22,7 @@ impl Resource {
     /// * [Employee](https://developer.simprogroup.com/apidoc/?page=eb626c94531ec554f93b2b78a77c8b1b#tag/Employees/operation/ad2cdcfe3653fce4e460e4468acc2867)
     /// * [Schedule](https://developer.simprogroup.com/apidoc/?page=ccdb7bf9d93e5652b57cabcc8c41e061#tag/Schedules/operation/4a005958478750b0f96cb00b3c9da0f6)
     #[allow(unused)]
-    #[tracing::instrument(skip(self, ids))]
+    #[tracing::instrument(skip(self, ids, app))]
     pub(crate) async fn get_records(&self, ids: &[u64], app: Arc<AppState>) -> anyhow::Result<Records> {
         use crate::api::Columns;
 
@@ -38,6 +38,7 @@ impl Resource {
                     .get_schedules()
                     .search(id_search)
                     .columns(api::Schedule::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Schedule'"))?
@@ -63,6 +64,7 @@ impl Resource {
                     .get_cost_centers()
                     .search(id_search)
                     .columns(api::CostCenter::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Cost Center'"))?
@@ -74,6 +76,7 @@ impl Resource {
                     .get_quotes()
                     .search(id_search)
                     .columns(api::Quote::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Quote'"))?
@@ -85,6 +88,7 @@ impl Resource {
                     .get_leads()
                     .search(id_search)
                     .columns(api::Lead::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Lead'"))?
@@ -96,6 +100,7 @@ impl Resource {
                     .get_jobs()
                     .search(id_search)
                     .columns(api::Job::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Job'"))?
@@ -107,6 +112,7 @@ impl Resource {
                     .get_sites()
                     .search(id_search)
                     .columns(api::Site::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Site'"))?
@@ -118,6 +124,7 @@ impl Resource {
                     .get_employees()
                     .search(id_search)
                     .columns(api::Employee::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Employee'"))?
@@ -129,12 +136,15 @@ impl Resource {
                     .get_activities()
                     .search(id_search)
                     .columns(api::Activity::COLUMNS.join(","))
+                    .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Activity'"))?
                     .into_inner(),
             ),
         };
+
+
 
         return Ok(records);
     }

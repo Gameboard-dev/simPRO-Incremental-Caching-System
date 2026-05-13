@@ -22,25 +22,36 @@ use tracing::instrument;
 ///
 /// Errors are logged via tracing and return `400 BAD_REQUEST`.
 #[instrument(skip(app, headers, body))]
-pub async fn webhook_handler(State(app): State<Arc<AppState>>, headers: HeaderMap, body: Bytes) -> StatusCode {
+pub async fn webhook_handler(
+    State(app): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> StatusCode {
     match (|| -> anyhow::Result<_> {
         verify_signature(&app.webhook_secret, &headers, &body)?;
         Ok(parse_webhook(body)?)
     })() {
         Ok((resource, operation, id)) => {
-            // --------------------------------------------------------
-            let mut webhook_events = app.webhook_events.acquire_lock();
-            let index: usize = EventBuffer::index(resource, operation);
-            webhook_events[index].push(id);
-            // --------------------------------------------------------
-            if (webhook_events[index].len() > app.sync_threshold) {
-                let handle = app.clone();
-                crate::sync_once(handle);
+            let stale: bool = {
+                let mut webhook_events = app.webhook_events.acquire_lock();
+                let index = EventBuffer::index(resource, operation);
+                webhook_events[index].push(id);
+                webhook_events[index].len() > app.sync_threshold
+            };
+            if let Err(err) =
+                app.webhook_events.persist_to_file(&app.webhook_events_path)
+            {
+                tracing::error!(?err, "Failed to persist webhook event buffer");
+                return StatusCode::INTERNAL_SERVER_ERROR;
             }
-            // --------------------------------------------------------
-            #[cfg(debug_assertions)]
-            tracing::debug!(pair = ?(resource, operation), "Pushed");
-            // --------------------------------------------------------
+            if stale {
+                let app = app.clone();
+                tokio::spawn(async move {
+                    if let Err(err) = crate::sync_once(app).await {
+                        tracing::error!(?err, "Webhook synchronization failed");
+                    }
+                });
+            }
             StatusCode::OK
         }
         Err(e) => {
@@ -56,7 +67,11 @@ pub async fn webhook_handler(State(app): State<Arc<AppState>>, headers: HeaderMa
 /// using a shared secret string. The hex-encoded digest is sent in the
 /// `X-Response-Signature` header. We recompute with the secret to verify
 /// message authenticity.
-pub fn verify_signature(secret: &str, headers: &HeaderMap, body: &Bytes) -> anyhow::Result<()> {
+pub fn verify_signature(
+    secret: &str,
+    headers: &HeaderMap,
+    body: &Bytes,
+) -> anyhow::Result<()> {
     // --------------------------------------------------------
     let signature: &str = headers
         .get("X-Response-Signature")
@@ -70,18 +85,26 @@ pub fn verify_signature(secret: &str, headers: &HeaderMap, body: &Bytes) -> anyh
     Hmac::<Sha1>::new_from_slice(secret.as_bytes())
         .expect("Failed to initialize HMAC-SHA1")
         .chain_update(&body)
-        .verify_slice(&hex::decode(signature).context("Failed to decode X-Response-Signature")?)?;
+        .verify_slice(
+            &hex::decode(signature)
+                .context("Failed to decode X-Response-Signature")?,
+        )?;
     // --------------------------------------------------------
     Ok(())
 }
 
-pub fn parse_webhook(body: Bytes) -> anyhow::Result<(Resource, Operation, u64)> {
+pub fn parse_webhook(
+    body: Bytes,
+) -> anyhow::Result<(Resource, Operation, u64)> {
     // --------------------------------------------------------
     let payload: WebhookPayload = serde_json::from_slice(&body)?;
     // --------------------------------------------------------
-    let resource: Resource = payload.resource().context("Webhook: Missing 'resource'")?;
+    let resource: Resource =
+        payload.resource().context("Webhook: Missing 'resource'")?;
     // --------------------------------------------------------
-    let operation: Operation = payload.operation().context("Webhook: Missing 'operation'")?;
+    let operation: Operation = payload
+        .operation()
+        .context("Webhook: Missing 'operation'")?;
     // --------------------------------------------------------
     let resource_id: u64 = payload
         .reference
@@ -89,7 +112,13 @@ pub fn parse_webhook(body: Bytes) -> anyhow::Result<(Resource, Operation, u64)> 
         .context("Webhook: Missing Resource ID")?;
     // --------------------------------------------------------
     #[cfg(debug_assertions)]
-    tracing::debug!(?payload, ?resource, ?operation, resource_id, "Parsed webhook payload");
+    tracing::debug!(
+        ?payload,
+        ?resource,
+        ?operation,
+        resource_id,
+        "Parsed webhook payload"
+    );
     // --------------------------------------------------------
     Ok((resource, operation, resource_id))
 }

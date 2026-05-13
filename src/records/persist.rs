@@ -9,15 +9,15 @@ use crate::db::insertables;
 use crate::records::hydrate::Records;
 use crate::webhook::variants::Resource;
 use diesel::ExpressionMethods;
-use diesel::RunQueryDsl;
-use diesel::pg::PgConnection;
-use diesel::r2d2::ConnectionManager;
-use r2d2::PooledConnection;
+use diesel_async::AsyncConnection;
+use diesel_async::AsyncPgConnection;
+use diesel_async::RunQueryDsl;
+use diesel_async::pooled_connection::deadpool::Object;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-/// A macro expression that generates Diesel `ON CONFLICT DO UPDATE` assignments 
-/// equivalent to SQL: `UPDATE SET column = EXCLUDED.column` which matches one or more 
+/// A macro expression that generates Diesel `ON CONFLICT DO UPDATE` assignments
+/// equivalent to SQL: `UPDATE SET column = EXCLUDED.column` which matches one or more
 /// comma-separated column identifiers $($col:ident),+ with an optional trailing comma $(,)?
 macro_rules! to_update {($($col:ident),+ $(,)?) => {($( $col.eq(diesel::upsert::excluded($col)) ),+)};}
 
@@ -29,10 +29,10 @@ impl Resource {
     /// * [Schedule](https://developer.simprogroup.com/apidoc/?page=ccdb7bf9d93e5652b57cabcc8c41e061#tag/Schedules/operation/4a005958478750b0f96cb00b3c9da0f6)
     #[allow(unused)]
     #[tracing::instrument(skip(self, records, connection))]
-    pub(crate) fn upsert_records(
+    pub(crate) async fn upsert_records(
         &self,
         records: Records,
-        connection: &mut PooledConnection<ConnectionManager<PgConnection>>,
+        connection: &mut Object<AsyncPgConnection>,
     ) -> anyhow::Result<()> {
         match records {
             Records::Schedule(records) => {
@@ -48,36 +48,41 @@ impl Resource {
                     .on_conflict(id)
                     .do_update()
                     .set(to_update!(date_modified, staff_id, schedule_type, notes))
-                    .execute(connection)?;
+                    .execute(connection)
+                    .await?;
             }
             Records::Job(records) => {
-                {
-                    use crate::db::table::company_customers::dsl::*;
+                use crate::db::table::company_customers::dsl::{
+                    company_customers, company_name, id as company_customer_id,
+                };
+                use crate::db::table::jobs::dsl::{
+                    customer_id, date_modified, description, id as job_id, job_type, jobs, name, site_id, stage,
+                    status_id,
+                };
 
+                let company_customer_rows = records
+                    .iter()
+                    .map(insertables::NewCompanyCustomer::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let job_rows = records
+                    .iter()
+                    .map(insertables::NewJob::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                let conn: &mut AsyncPgConnection = &mut **connection;
+                conn.transaction::<_, diesel::result::Error, _>(async move |conn| {
                     diesel::insert_into(company_customers)
-                        .values(
-                            records
-                                .iter()
-                                .map(insertables::NewCompanyCustomer::try_from)
-                                .collect::<Result<Vec<_>, _>>()?,
-                        )
-                        .on_conflict(id)
+                        .values(company_customer_rows)
+                        .on_conflict(company_customer_id)
                         .do_update()
-                        .set(to_update!(id, company_name))
-                        .execute(connection)?;
-                }
-
-                {
-                    use crate::db::table::jobs::dsl::*;
+                        .set(company_name.eq(diesel::upsert::excluded(company_name)))
+                        .execute(&mut *conn)
+                        .await?;
 
                     diesel::insert_into(jobs)
-                        .values(
-                            records
-                                .iter()
-                                .map(insertables::NewJob::try_from)
-                                .collect::<Result<Vec<_>, _>>()?,
-                        )
-                        .on_conflict(id)
+                        .values(job_rows)
+                        .on_conflict(job_id)
                         .do_update()
                         .set(to_update!(
                             name,
@@ -89,8 +94,12 @@ impl Resource {
                             status_id,
                             job_type
                         ))
-                        .execute(connection)?;
-                }
+                        .execute(&mut *conn)
+                        .await?;
+
+                    Ok(())
+                })
+                .await?;
             }
 
             Records::Site(records) => {
@@ -112,7 +121,8 @@ impl Resource {
                         address_postal_code,
                         date_modified
                     ))
-                    .execute(connection)?;
+                    .execute(connection)
+                    .await?;
             }
 
             Records::Employee(records) => {
@@ -128,7 +138,8 @@ impl Resource {
                     .on_conflict(id)
                     .do_update()
                     .set(to_update!(id, name))
-                    .execute(connection)?;
+                    .execute(connection)
+                    .await?;
             }
 
             Records::Activity(records) => {
@@ -144,7 +155,8 @@ impl Resource {
                     .on_conflict(id)
                     .do_update()
                     .set(to_update!(id, name))
-                    .execute(connection)?;
+                    .execute(connection)
+                    .await?;
             }
 
             Records::CostCenter(records) => {
@@ -160,7 +172,8 @@ impl Resource {
                     .on_conflict(id)
                     .do_update()
                     .set(to_update!(id, name))
-                    .execute(connection)?;
+                    .execute(connection)
+                    .await?;
             }
 
             Records::Quote(records) => {
@@ -176,7 +189,8 @@ impl Resource {
                     .on_conflict(id)
                     .do_update()
                     .set(to_update!(name, id))
-                    .execute(connection)?;
+                    .execute(connection)
+                    .await?;
             }
 
             Records::Lead(records) => {
@@ -192,7 +206,8 @@ impl Resource {
                     .on_conflict(id)
                     .do_update()
                     .set(to_update!(name, id))
-                    .execute(connection)?;
+                    .execute(connection)
+                    .await?;
             }
         }
 

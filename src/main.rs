@@ -13,8 +13,9 @@ use crate::webhook::handler::webhook_handler;
 use anyhow::Context;
 pub use api::Client as ApiClient;
 use axum::{Router, routing::post};
-use diesel::PgConnection;
-use diesel::r2d2::{ConnectionManager, PooledConnection};
+use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::pooled_connection::deadpool::Pool;
 use dotenvy::dotenv;
 use reqwest::Client as HttpClient;
 use reqwest::header::{AUTHORIZATION, HeaderMap};
@@ -22,12 +23,24 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use retry_policies::Jitter;
 use retry_policies::policies::ExponentialBackoff;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::{env, net::SocketAddr, time::Duration};
 use tokio::net::TcpListener;
+use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
+use tracing::instrument;
 
-pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+/// This uses `diesel-async` `0.9.0` with a `deadpool` connection pool,
+/// rather than synchronous Diesel with `r2d2`.
+/// With `diesel-async`, query execution uses `AsyncPgConnection` and async Diesel traits
+/// such as `diesel_async::RunQueryDsl`.
+///
+/// The original implementation used Diesel’s synchronous `PgConnection`,
+/// which performed blocking database I/O. In an async Tokio application,
+/// that meant database writes had to be wrapped in `tokio::task::spawn_blocking(...)`
+/// so they ran on Tokio’s blocking thread pool instead of occupying async worker threads.
+pub type DbPool = Pool<AsyncPgConnection>;
 
 /// Reads a required environment variable.
 /// * Returns a contextualized error if the variable is not present.
@@ -43,6 +56,9 @@ fn build_api_client() -> anyhow::Result<ApiClient> {
         format!("Bearer {}", require_env("SIMPRO_API_KEY")?).parse()?,
     );
     let http_client = HttpClient::builder()
+        // Ignore HTTP(S)_PROXY environment variables inside the container.
+        // Invalid proxy schemes can cause reqwest connection failures before the request is sent.
+        .no_proxy()
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(60))
         .default_headers(headers)
@@ -55,11 +71,7 @@ fn build_api_client() -> anyhow::Result<ApiClient> {
     let middleware_client: ClientWithMiddleware = ClientBuilder::new(http_client)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
         .build();
-    let base_url = format!(
-        "https://{}/api/v1.0/companies/{}/",
-        require_env("SIMPRO_DOMAIN")?,
-        require_env("SIMPRO_COMPANY_ID")?
-    );
+    let base_url = format!("https://{}", require_env("SIMPRO_DOMAIN")?);
     Ok(ApiClient::new_with_client(&base_url, middleware_client))
 }
 
@@ -74,23 +86,37 @@ fn init_tracing(level: &str) {
         .init();
 }
 
-#[derive(Debug)]
 pub struct AppState {
     pub api: ApiClient,
+    pub company_id: String,
     pub webhook_secret: String,
     pub webhook_events: EventBuffer,
+    pub webhook_events_path: PathBuf,
     pub db_connection_pool: DbPool,
     sync_threshold: usize,
 }
 
-pub fn build_app_state(api: ApiClient) -> anyhow::Result<AppState> {
+pub async fn build_app_state(api: ApiClient) -> anyhow::Result<AppState> {
+    let database_url = require_env("DATABASE_URL")?;
+    let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
+    let webhook_events_path = PathBuf::from(
+        env::var("WEBHOOK_EVENTS_FILE").unwrap_or_else(|_| "data/webhook-events.json".to_string()),
+    );
+    let webhook_events = EventBuffer::load_from_file(&webhook_events_path).unwrap_or_else(|err| {
+        tracing::warn!(
+            ?err,
+            "Failed to load persisted webhook events; starting empty"
+        );
+        EventBuffer::default()
+    });
     Ok(AppState {
-        api: api,
+        api,
+        company_id: require_env("SIMPRO_COMPANY_ID")?,
         webhook_secret: require_env("SIMPRO_WEBHOOK_SECRET")?,
-        webhook_events: EventBuffer::default(),
+        webhook_events,
+        webhook_events_path,
         sync_threshold: require_env("SYNC_THRESHOLD")?.parse::<usize>()?,
-        db_connection_pool: r2d2::Pool::builder()
-            .build(ConnectionManager::<PgConnection>::new(require_env("DATABASE_URL")?))?,
+        db_connection_pool: Pool::builder(manager).build()?,
     })
 }
 
@@ -113,51 +139,75 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// This executes a single synchronization pipeline.
-///
-/// Buffered webhook events are drained and grouped by `(Resource, Operation)`.
-///
-/// The corresponding simPRO records are then:
-/// 1. Retrieved from the simPRO API using the resource-specific GET endpoint
-/// 2. Hydrated into strongly typed API models
-/// 3. Translated into Diesel insertable structs
-/// 4. Upserted into the local PostgreSQL database
-///
+/// This executes a single synchronization pipeline:
+/// * Buffered webhook events are drained and grouped by `(Resource, Operation)`
+/// * The corresponding simPRO records are then:
+///     1. Retrieved from the simPRO API using the resource-specific GET endpoint
+///     2. Hydrated into strongly typed API models
+///     3. Translated into Diesel insertable structs
+///     4. Upserted into the local PostgreSQL database
+#[instrument(skip(app))]
 async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
     use crate::records::hydrate::Records;
     // --------------------------------------------------------
-    let events: Buffer = app.webhook_events.drain();
+    let events: Buffer = app.webhook_events.snapshot();
     // --------------------------------------------------------
-    for (i, record_ids) in events.into_iter().enumerate() {
+    #[cfg(debug_assertions)]
+    tracing::debug!(?events, "Synchronizing events");
+    // --------------------------------------------------------
+    for (i, record_ids) in events.iter().enumerate() {
         if !record_ids.is_empty() {
             let (resource, operation) = EventBuffer::reverse_index(i);
-            let records: Records = resource.get_records(&record_ids, app.clone()).await?;
-            resource.upsert_records(records, &mut app.db_connection_pool.get()?)?;
+            // --------------------------------------------------------
+            #[cfg(debug_assertions)]
+            tracing::debug!(pair = ?(resource, operation), "Hydrating and Persisting");
+            // --------------------------------------------------------
+            let records: Records = resource.get_records(record_ids, app.clone()).await?;
+            // --------------------------------------------------------
+            #[cfg(debug_assertions)]
+            tracing::debug!(?records, "Upserting");
+            // --------------------------------------------------------
+            let pool = app.db_connection_pool.clone();
+            // --------------------------------------------------------------------
+            // Diesel's native PgConnection API is synchronous/blocking.
+            // This uses `diesel-async` crate rather than `tokio::task::spawn_blocking`.
+            // --------------------------------------------------------------------
+            let mut conn = pool.get().await?;
+            resource.upsert_records(records, &mut conn).await?;
         }
     }
+    // --------------------------------------------------------------------
+    // Mark this snapshot as having been synchronized only if every
+    // batch has completed successfully.
+    // --------------------------------------------------------------------
+    // ON CONFLICT DO UPDATE makes repeated synchronization
+    // attempts with the same ID snapshot idempotent.
+    // --------------------------------------------------------------------
+    app.webhook_events.remove_synced(&events);
+    app.webhook_events
+        .persist_to_file(&app.webhook_events_path)?;
     Ok(())
 }
 
-/// Begins the background webhook synchronization worker.
+/// --------------------------------------------------------------------
+/// Begin the background webhook synchronization worker.
 ///
 /// Runs [sync_once] every N `seconds`.
 ///
 /// This runs continuously in the background using `tokio::spawn`.
 ///
 /// Errors during synchronization are logged and do not terminate the worker.
-async fn start_sync(app: Arc<AppState>, seconds: Duration) -> anyhow::Result<()> {
-    use tokio::time::{Interval, interval};
-    let mut timer: Interval = interval(seconds);
-    // --------------------------------------------------------
-    tokio::spawn(async move {
-        loop {
-            if let Err(err) = sync_once(app.clone()).await {
-                tracing::error!(?err, "Webhook synchronization failed");
-            }
-            timer.tick().await;
+/// --------------------------------------------------------------------
+async fn sync_worker(app: Arc<AppState>, seconds: Duration) {
+    let mut timer = tokio::time::interval(seconds);
+
+    loop {
+        timer.tick().await;
+
+        if let Err(err) = sync_once(app.clone()).await {
+            tracing::error!(?err, "Webhook synchronization failed");
         }
-    });
-    Ok(())
+    }
 }
 
 #[tokio::main]
@@ -169,14 +219,15 @@ async fn main() -> anyhow::Result<()> {
     // ------------------------------------------------------
     let client: ApiClient = build_api_client()?;
     // ------------------------------------------------------
-    let app_state: AppState = build_app_state(client)?;
+    let app_state: AppState = build_app_state(client).await?;
     let app_state: Arc<AppState> = Arc::new(app_state);
     // ------------------------------------------------------
-    serve(app_state.clone()).await?;
-    // ------------------------------------------------------
     let seconds: u64 = require_env("DATABASE_SYNC_INTERVAL")?.parse::<u64>()?;
+    let sync_task: JoinHandle<()> =
+        tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));
     // ------------------------------------------------------
-    start_sync(app_state, Duration::from_secs(seconds)).await;
+    serve(app_state).await?;
     // ------------------------------------------------------
+    sync_task.abort();
     Ok(())
 }
