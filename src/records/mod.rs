@@ -1,4 +1,2 @@
-pub(crate) mod get_;
-pub(crate) mod upsert_;
-pub(crate) mod prefetch;
-pub(crate) mod paginate;
+pub(crate) mod get_records;
+pub(crate) mod upsert_records;

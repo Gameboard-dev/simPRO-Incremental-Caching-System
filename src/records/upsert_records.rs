@@ -6,7 +6,7 @@ use crate::AppState;
 use crate::api::types as api;
 use crate::db;
 use crate::db::insertables;
-use crate::records::get_::Records;
+use crate::records::get_records::Records;
 use crate::webhook::variants::Resource;
 use diesel::ExpressionMethods;
 use diesel_async::AsyncConnection;
@@ -61,27 +61,32 @@ impl Resource {
             }
             Records::Job(records) => {
                 let connection: &mut AsyncPgConnection = &mut **connection;
-                // ------------------------------------------------------------------------------------
-                // Job upsertion reuses lightweight nested metadata already
-                // present in the simPRO `Job` response payload. This already contains the
-                // small subset of fields required by the local schema (IDs, names, colors, etc.),
-                // so issuing additional API requests for full Job Status or Customer resources would
-                // add unnecessary network overhead without providing additional persistence value.
+                // ------------------------------------------------------------------------------------------------
+                // Lightweight nested metadata in `Job` contains the small subset of fields required 
+                // by the local schema, so issuing additional API requests for full Job Status or Customer 
+                // resources would add unnecessary network overhead without providing additional persistence value.
                 //
-                // Job-related tables are written inside a single SQL transaction so the
-                // associated status, customer, and job rows remain consistent if any step
-                // fails.
-                // ------------------------------------------------------------------------------------
+                // Job-related tables are then written inside a single atomic (all or nothing) SQL transaction.
+                // ------------------------------------------------------------------------------------------------
                 connection
                     .transaction::<_, anyhow::Error, _>(async move |conn| {
                         // -----------------------------> JOB STATUSES
                         {
                             use crate::db::table::job_statuses::dsl::*;
                             // ------------------------------------------------------------------------------------
-                            let rows = records
+                            let mut rows = records
                                 .iter()
                                 .map(|job| insertables::NewJobStatuse::try_from(&job.status))
                                 .collect::<Result<Vec<_>, _>>()?;
+                            // ------------------------------------------------------------------------------------
+                            // The simPRO API returns unique records but this will return duplicate rows
+                            // for multiple jobs with the same nested reference object (e.g. `Job.Customer`).
+                            //
+                            // Deduplication is done once sorted with [`Vec::sort_by_key`]
+                            // as [`Vec::dedup_by_key`] only removes consecutive duplicates.
+                            // ------------------------------------------------------------------------------------
+                            rows.sort_by_key(|row| row.id);
+                            rows.dedup_by_key(|row| row.id);
                             // ------------------------------------------------------------------------------------
                             diesel::insert_into(job_statuses)
                                 .values(rows)
@@ -95,10 +100,13 @@ impl Resource {
                         {
                             use crate::db::table::company_customers::dsl::*;
                             // ------------------------------------------------------------------------------------
-                            let rows = records
+                            let mut rows = records
                                 .iter()
                                 .map(insertables::NewCompanyCustomer::try_from)
                                 .collect::<Result<Vec<_>, _>>()?;
+                            // ------------------------------------------------------------------------------------
+                            rows.sort_by_key(|row| row.id);
+                            rows.dedup_by_key(|row| row.id);
                             // ------------------------------------------------------------------------------------
                             diesel::insert_into(company_customers)
                                 .values(rows)

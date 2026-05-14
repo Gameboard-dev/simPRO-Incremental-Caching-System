@@ -9,7 +9,7 @@ pub(crate) mod parse;
 pub(crate) mod records;
 pub(crate) mod webhook;
 pub(crate) mod time;
-use crate::records::prefetch::load_initial_records;
+use crate::records::get_records::load_initial_records;
 use crate::webhook::events::{Buffer, EventBuffer};
 use crate::webhook::handler::webhook_handler;
 use anyhow::Context;
@@ -152,7 +152,7 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
 ///     4. Upserted into the local PostgreSQL database
 #[instrument(skip(app))]
 async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
-    use crate::records::get_::Records;
+    use crate::records::get_records::Records;
     // --------------------------------------------------------
     let events: Buffer = app.webhook_events.snapshot();
     // --------------------------------------------------------

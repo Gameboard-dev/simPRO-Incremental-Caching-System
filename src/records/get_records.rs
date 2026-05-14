@@ -1,17 +1,55 @@
-use chrono::{DateTime, SecondsFormat, Utc};
+use chrono::{DateTime, Months, SecondsFormat, Utc};
 
 use crate::{
-    AppState,
-    api::types as api,
-    parse::reference::IDs,
-    records::paginate::{PAGE_SIZE, paginate},
-    time::TimeRangeExt,
+    AppState, api::types as api, parse::reference::IDs, time::TimeRangeExt,
     webhook::variants::Resource,
 };
 use std::sync::Arc;
 
-// TODO
-// If there are more than 250 records in a response, I will need to paginate with multiple requests
+/// The maximum number of results to be returned by a request (`integer [1...250]`)
+/// Values above 250 result in the error: "API query parameter should be an integer value between 1 - 250"
+pub(crate) const PAGE_SIZE: i64 = 250;
+
+/// simPRO list endpoints return at most [`PAGE_SIZE`] records per request,
+/// so a single API call may not contain the complete result set.
+///
+/// This helper keeps requesting pages until the endpoint returns fewer than [`PAGE_SIZE`]
+/// records, which indicates that the final page has been reached.
+/// 
+/// It accepts a closure which determines how pages are fetched
+/// via the requisite Progenator builder method.
+///
+/// Each returned page is appended into a single `Vec<T>`, so callers receive a
+/// flattened result.
+///
+/// This keeps pagination centralized and makes endpoint-specific code only
+/// responsible for describing how to fetch one page.
+///
+/// ### Documentation:
+/// https://developer.simprogroup.com/apidoc/?page=ccdb7bf9d93e5652b57cabcc8c41e061#tag/Schedules/operation/c81549288cc61e04c339b32a65425326
+pub(crate) async fn paginate<T, Fut, F>(mut fetch_page: F) -> anyhow::Result<Vec<T>>
+where
+    F: FnMut(i64) -> Fut,
+    Fut: std::future::Future<Output = anyhow::Result<Vec<T>>>,
+{
+    let mut page = 1;
+    let mut all = Vec::new();
+
+    loop {
+        let mut records = fetch_page(page).await?;
+        let count = records.len();
+
+        all.append(&mut records);
+
+        if count < PAGE_SIZE as usize {
+            break;
+        }
+
+        page += 1;
+    }
+
+    Ok(all)
+}
 
 /// Enum of records returned by API endpoints
 #[derive(Debug)]
@@ -44,6 +82,7 @@ impl Records {
 
 impl Resource {
     /// # get_records_by_id
+    /// 
     /// Fetches records from simPRO by their resource IDs and hydrates any
     /// dependent records required for database upsertion.
     ///
@@ -61,6 +100,19 @@ impl Resource {
     /// This is the normal webhook-driven hydration path: webhook events provide
     /// record IDs, and those IDs are converted into an `in(...)` filter,
     /// and the resulting records are returned in database dependency order for upsertion.
+    ///
+    /// The equivalent query can be tested in the Linux shell using:
+    /// 
+    /// ```bash
+    /// curl -sS \
+    ///   --request GET \
+    ///   --url 'https://grainconnect.simprosuite.com/api/v1.0/companies/0/jobs/?ID=in(156344,156344)&columns=Customer,DateModified,ID,Name,Site,Stage,Status,Type&page=1&pageSize=250' \
+    ///   --header "Authorization: Bearer $SIMPRO_API_KEY" \
+    ///   | jq
+    /// ```
+    /// 
+    /// Note that deduplication of IDs is not required here because the simPRO API will 
+    /// return only unique records even if duplicate records are requested (e.g., with ID=in(157,157))
     #[allow(unused)]
     #[tracing::instrument(skip(self, ids, app))]
     pub(crate) async fn get_records_by_id(
@@ -363,4 +415,58 @@ impl Resource {
 
         Ok(records)
     }
+}
+
+/// Returns a `(start, end)` [`DateTime<Utc>`] tuple as a time range.
+pub(crate) fn time_range(
+    base: DateTime<Utc>,
+    sub_months: u32,
+    add_months: u32,
+) -> (DateTime<Utc>, DateTime<Utc>) {
+    let start: DateTime<Utc> = base
+        .checked_sub_months(Months::new(sub_months))
+        .expect("Invalid start date");
+
+    let end: DateTime<Utc> = base
+        .checked_add_months(Months::new(add_months))
+        .expect("invalid end date");
+
+    return (start, end);
+}
+
+/// Webhook delivery is incremental and only captures events that occur
+/// after the service begins listening. On startup, the local cache may
+/// be missing historical schedules and their dependent records
+/// (Jobs, Sites, Employees, Activities, Quotes, Leads, etc.).
+///
+/// This bootstrap step seeds the database before the normal webhook-based
+/// incremental synchronization loop begins, retrieving all schedules created
+/// or modified within the last calendar month up to the current UTC timestamp,
+/// and persisting all related records into the database.
+///
+/// How does simPRO pagination work?
+///
+/// ### Documentation
+/// * [API Operators](https://developer.simprogroup.com/apidoc/?page=ff7c0fcd6a31e735a61c001f75426961#tag/Search-resources)
+/// * [GET Schedules API](https://developer.simprogroup.com/apidoc/?page=ccdb7bf9d93e5652b57cabcc8c41e061#tag/Schedules/operation/c81549288cc61e04c339b32a65425326)
+#[tracing::instrument(skip(app))]
+pub(crate) async fn load_initial_records(app: Arc<AppState>) -> anyhow::Result<()> {
+    use crate::records::get_records::Records;
+    use crate::webhook::variants::Resource;
+
+    let (add_months, sub_months) = (3, 3);
+    let records_batches: Vec<Records> = Resource::Schedule
+        .get_records_by_date(time_range(Utc::now(), add_months, sub_months), app.clone())
+        .await?;
+
+    let pool = app.db_connection_pool.clone();
+    let mut conn = pool.get().await?;
+    for records in records_batches {
+        records
+            .resource()
+            .upsert_records(records, &mut conn)
+            .await?;
+    }
+
+    Ok(())
 }
