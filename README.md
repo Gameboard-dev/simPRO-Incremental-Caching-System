@@ -119,24 +119,4 @@ This value must match the webhook subscription secret configured in simPRO webho
 
 [simPRO Webhook Documentation](https://developer.simprogroup.com/apidoc/?page=cd8682773ab1b07fdc9661984e281ce3#tag/Web-Hooks)
 
-### Local Development
 
-```sh
-docker compose --profile dev up --build
-```
-
-To ensure Ngrok is listening, visit the following URL:
-```
-http://localhost:4040/inspect/http
-```
-
-### Hard Reset
-
-```bash
-docker compose down -v --remove-orphans
-docker rm -f postgres simpro-ingestion-service-1 simpro-schema-db 2>/dev/null || true
-docker network disconnect -f simpro-schema-net simpro-schema-db 2>/dev/null || true
-docker network rm simpro-schema-net 2>/dev/null || true
-docker network prune -f
-docker compose --profile dev up --build
-```

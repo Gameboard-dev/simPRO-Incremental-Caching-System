@@ -2666,6 +2666,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `date`
 - `id`
 - `job_id`: Filter schedules by job ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().
 - `lead_id`: Filter schedules by lead ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().
@@ -2679,6 +2680,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_schedules()
     .company_id(company_id)
+    .date(date)
     .id(id)
     .job_id(job_id)
     .lead_id(lead_id)
@@ -2848,8 +2850,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetCustomers<'a> {
@@ -2932,28 +2934,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -3054,8 +3050,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetEmployees<'a> {
@@ -3138,28 +3134,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -3260,8 +3250,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetCostCenters<'a> {
@@ -3344,28 +3334,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -3466,8 +3450,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetJobs<'a> {
@@ -3550,28 +3534,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -3668,6 +3646,7 @@ pub mod builder {
     pub struct GetSchedules<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        date: Result<Option<::std::string::String>, String>,
         id: Result<Option<::std::string::String>, String>,
         job_id: Result<Option<::std::string::String>, String>,
         lead_id: Result<Option<::std::string::String>, String>,
@@ -3675,8 +3654,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetSchedules<'a> {
@@ -3684,6 +3663,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                date: Ok(None),
                 id: Ok(None),
                 job_id: Ok(None),
                 lead_id: Ok(None),
@@ -3704,6 +3684,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn date<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.date = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for date failed"
                         .to_string()
                 });
             self
@@ -3801,28 +3794,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -3845,6 +3832,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                date,
                 id,
                 job_id,
                 lead_id,
@@ -3857,6 +3845,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let date = date.map_err(Error::InvalidRequest)?;
             let id = id.map_err(Error::InvalidRequest)?;
             let job_id = job_id.map_err(Error::InvalidRequest)?;
             let lead_id = lead_id.map_err(Error::InvalidRequest)?;
@@ -3887,6 +3876,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("Date", &date))
                 .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(&progenitor_middleware_client::QueryParam::new("JobID", &job_id))
                 .query(
@@ -3936,8 +3926,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetActivities<'a> {
@@ -4020,28 +4010,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -4142,8 +4126,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetSites<'a> {
@@ -4226,28 +4210,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -4348,8 +4326,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetLeads<'a> {
@@ -4432,28 +4410,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self
@@ -4554,8 +4526,8 @@ pub mod builder {
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
-        page: Result<Option<::std::string::String>, String>,
-        page_size: Result<Option<::std::string::String>, String>,
+        page: Result<Option<i64>, String>,
+        page_size: Result<Option<i64>, String>,
         search: Result<Option<::std::string::String>, String>,
     }
     impl<'a> GetQuotes<'a> {
@@ -4638,28 +4610,22 @@ pub mod builder {
         }
         pub fn page<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page failed".to_string());
             self
         }
         pub fn page_size<V>(mut self, value: V) -> Self
         where
-            V: std::convert::TryInto<::std::string::String>,
+            V: std::convert::TryInto<i64>,
         {
             self.page_size = value
                 .try_into()
                 .map(Some)
-                .map_err(|_| {
-                    "conversion to `:: std :: string :: String` for page_size failed"
-                        .to_string()
-                });
+                .map_err(|_| "conversion to `i64` for page_size failed".to_string());
             self
         }
         pub fn search<V>(mut self, value: V) -> Self

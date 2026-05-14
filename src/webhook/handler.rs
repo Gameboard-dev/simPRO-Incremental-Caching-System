@@ -32,7 +32,7 @@ pub async fn webhook_handler(
         Ok(parse_webhook(body)?)
     })() {
         Ok((resource, operation, id)) => {
-            let stale: bool = {
+            let should_upsert: bool = {
                 let mut webhook_events = app.webhook_events.acquire_lock();
                 let index = EventBuffer::index(resource, operation);
                 webhook_events[index].push(id);
@@ -44,7 +44,7 @@ pub async fn webhook_handler(
                 tracing::error!(?err, "Failed to persist webhook event buffer");
                 return StatusCode::INTERNAL_SERVER_ERROR;
             }
-            if stale {
+            if should_upsert {
                 let app = app.clone();
                 tokio::spawn(async move {
                     if let Err(err) = crate::sync_once(app).await {

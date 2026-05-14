@@ -8,6 +8,8 @@ pub(crate) mod db;
 pub(crate) mod parse;
 pub(crate) mod records;
 pub(crate) mod webhook;
+pub(crate) mod time;
+use crate::records::prefetch::load_initial_records;
 use crate::webhook::events::{Buffer, EventBuffer};
 use crate::webhook::handler::webhook_handler;
 use anyhow::Context;
@@ -150,7 +152,7 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
 ///     4. Upserted into the local PostgreSQL database
 #[instrument(skip(app))]
 async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
-    use crate::records::hydrate::Records;
+    use crate::records::get_::Records;
     // --------------------------------------------------------
     let events: Buffer = app.webhook_events.snapshot();
     // --------------------------------------------------------
@@ -164,7 +166,7 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
             #[cfg(debug_assertions)]
             tracing::debug!(pair = ?(resource, operation), "Hydrating and Persisting");
             // --------------------------------------------------------
-            let batches: Vec<Records> = resource.get_records(record_ids, app.clone()).await?;
+            let batches: Vec<Records> = resource.get_records_by_id(record_ids, app.clone()).await?;
             // --------------------------------------------------------
             #[cfg(debug_assertions)]
             tracing::debug!(?batches, "Upserting");
@@ -180,7 +182,7 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
             // for upsertion into the database
             // --------------------------------------------------------------------
             for records in batches {
-                resource.upsert_records(records, &mut conn).await?;
+                records.resource().upsert_records(records, &mut conn).await?;
             }
         }
     }
@@ -232,6 +234,8 @@ async fn main() -> anyhow::Result<()> {
     // ------------------------------------------------------
     let app_state: AppState = build_app_state(client).await?;
     let app_state: Arc<AppState> = Arc::new(app_state);
+    // ------------------------------------------------------
+    load_initial_records(app_state.clone());
     // ------------------------------------------------------
     let seconds: u64 = require_env("DATABASE_SYNC_INTERVAL")?.parse::<u64>()?;
     let sync_task: JoinHandle<()> = tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));

@@ -6,7 +6,7 @@ use crate::AppState;
 use crate::api::types as api;
 use crate::db;
 use crate::db::insertables;
-use crate::records::hydrate::Records;
+use crate::records::get_::Records;
 use crate::webhook::variants::Resource;
 use diesel::ExpressionMethods;
 use diesel_async::AsyncConnection;
@@ -23,6 +23,13 @@ use tokio::fs::read_link;
 macro_rules! to_update {($($col:ident),+ $(,)?) => {($( $col.eq(diesel::upsert::excluded($col)) ),+)};}
 
 impl Resource {
+    /// This function converts hydrated API models into Diesel insertable structs
+    /// and performs batched `INSERT ... ON CONFLICT DO UPDATE` operations using [`diesel_async`]
+    /// with [`AsyncPgConnection`] so PostgreSQL queries execute without blocking Tokio worker threads.
+    ///
+    /// All upserts are idempotent through PostgreSQL `ON CONFLICT DO UPDATE`,
+    /// allowing repeated synchronization attempts for the same records.
+    ///
     /// * [Activity](https://developer.simprogroup.com/apidoc/?page=d78ed35383108fb6c04c16d0a11b20fe#tag/Activities/operation/c88605b27f7e8a3873047d9af3a93574)
     /// * [Site](https://developer.simprogroup.com/apidoc/?page=3faa64303d5f5bcd043bb88f6768e603#tag/Sites/operation/101d05972386dfa7536b58fe655d382e)
     /// * [Job](https://developer.simprogroup.com/apidoc/?page=12ceff2290bb9039beaa8f36d5dec226#tag/Jobs/operation/9ca8d728df9f031d2828e79cbb093702)
@@ -54,6 +61,16 @@ impl Resource {
             }
             Records::Job(records) => {
                 let connection: &mut AsyncPgConnection = &mut **connection;
+                // ------------------------------------------------------------------------------------
+                // Job upsertion reuses lightweight nested metadata already
+                // present in the simPRO `Job` response payload. This already contains the
+                // small subset of fields required by the local schema (IDs, names, colors, etc.),
+                // so issuing additional API requests for full Job Status or Customer resources would
+                // add unnecessary network overhead without providing additional persistence value.
+                //
+                // Job-related tables are written inside a single SQL transaction so the
+                // associated status, customer, and job rows remain consistent if any step
+                // fails.
                 // ------------------------------------------------------------------------------------
                 connection
                     .transaction::<_, anyhow::Error, _>(async move |conn| {

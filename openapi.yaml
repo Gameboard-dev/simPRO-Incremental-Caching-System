@@ -4,227 +4,228 @@ info:
   version: 1.0.0
   contact: {}
 servers:
-- url: /
+  - url: /
 paths:
   /api/v1.0/companies/{companyID}/customers/:
     get:
       operationId: getCustomers
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all customers.
       description: List all customers.
       responses:
-        '200':
+        "200":
           description: List all customers.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Customer'
+                  $ref: "#/components/schemas/Customer"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/employees/:
     get:
       operationId: getEmployees
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit' 
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all employees.
       description: List all employees.
       responses:
-        '200':
+        "200":
           description: List all employees.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Employee'
+                  $ref: "#/components/schemas/Employee"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/setup/accounts/costCenters/:
     get:
       operationId: getCostCenters
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all cost centers.
       description: List all cost centers.
       responses:
-        '200':
+        "200":
           description: List all cost centers.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CostCenter'
+                  $ref: "#/components/schemas/CostCenter"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/jobs/:
     get:
       operationId: getJobs
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all jobs.
       description: List all jobs.
       responses:
-        '200':
-          description: List all jobs. 
+        "200":
+          description: List all jobs.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Job'
-    parameters: 
-    - $ref: '#/components/parameters/companyID'
+                  $ref: "#/components/schemas/Job"
+    parameters:
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/schedules/:
     get:
       operationId: getSchedules
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
-      - $ref: '#/components/parameters/JobID'
-      - $ref: '#/components/parameters/QuoteID'
-      - $ref: '#/components/parameters/LeadID'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Date"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/JobID"
+        - $ref: "#/components/parameters/QuoteID"
+        - $ref: "#/components/parameters/LeadID"
       summary: List all schedules.
       description: List all schedules.
       responses:
-        '200':
+        "200":
           description: List all schedules.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Schedule'
+                  $ref: "#/components/schemas/Schedule"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/setup/activities/:
     get:
       operationId: getActivities
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all activities.
       description: List all activities.
       responses:
-        '200':
+        "200":
           description: List all activities.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Activity'
+                  $ref: "#/components/schemas/Activity"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/sites/:
     get:
       operationId: getSites
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all sites.
       description: List all sites.
       responses:
-        '200':
+        "200":
           description: List all sites.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Site'
+                  $ref: "#/components/schemas/Site"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/leads/:
     get:
       operationId: getLeads
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all leads.
       description: List all leads.
       responses:
-        '200':
+        "200":
           description: List all leads.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Lead'
+                  $ref: "#/components/schemas/Lead"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
   /api/v1.0/companies/{companyID}/quotes/:
     get:
       operationId: getQuotes
       parameters:
-      - $ref: '#/components/parameters/search'
-      - $ref: '#/components/parameters/ID'
-      - $ref: '#/components/parameters/columns'
-      - $ref: '#/components/parameters/pageSize'
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/orderby'
-      - $ref: '#/components/parameters/limit'
+        - $ref: "#/components/parameters/search"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/columns"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/orderby"
+        - $ref: "#/components/parameters/limit"
       summary: List all quotes.
       description: List all quotes.
       responses:
-        '200':
+        "200":
           description: List all quotes.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Quote'
+                  $ref: "#/components/schemas/Quote"
     parameters:
-    - $ref: '#/components/parameters/companyID'
+      - $ref: "#/components/parameters/companyID"
 components:
   parameters:
     companyID:
@@ -234,7 +235,8 @@ components:
       schema:
         type: string
         default: 0
-      description: "(Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br
+      description:
+        "(Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br
         />\nFor more information about Multi-company, see:<br />\nhttps://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm"
     search:
       name: search
@@ -247,6 +249,12 @@ components:
       in: query
       schema:
         type: string
+    Date:
+      name: Date
+      in: query
+      schema:
+        type: string
+      example: between(2018-01-01,2018-12-31)
     columns:
       name: columns
       in: query
@@ -257,20 +265,23 @@ components:
       name: pageSize
       in: query
       schema:
-        type: string
+        type: integer
+        format: int64
       description: The maximum number of results to be returned by a request.
     page:
       name: page
       in: query
       schema:
-        type: string
+        type: integer
+        format: int64
       description: Set the page number on paginated request
     orderby:
       name: orderby
       in: query
       schema:
         type: string
-      description: Set the order of the requested records, by prefixing '-' on the column name you can get records by 
+      description:
+        Set the order of the requested records, by prefixing '-' on the column name you can get records by
         descending order. Comma separated list can also be provided.
     limit:
       name: limit
@@ -283,19 +294,19 @@ components:
       in: query
       schema:
         type: string
-      description: 'Filter schedules by job ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().'
+      description: "Filter schedules by job ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in()."
     QuoteID:
       name: QuoteID
       in: query
       schema:
         type: string
-      description: 'Filter schedules by quote ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().'
+      description: "Filter schedules by quote ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in()."
     LeadID:
       name: LeadID
       in: query
       schema:
         type: string
-      description: 'Filter schedules by lead ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().'
+      description: "Filter schedules by lead ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in()."
   schemas:
     Address:
       type: object
@@ -324,7 +335,7 @@ components:
         - ID
       properties:
         Address:
-          $ref: '#/components/schemas/Address'
+          $ref: "#/components/schemas/Address"
         Name:
           type: string
         DateModified:
@@ -406,19 +417,19 @@ components:
         Name:
           type: string
         Customer:
-          $ref: '#/components/schemas/Customer'
+          $ref: "#/components/schemas/Customer"
         DateModified:
           type: string
         Description:
           type: string
         Site:
-          $ref: '#/components/schemas/JobSite'
+          $ref: "#/components/schemas/JobSite"
         Stage:
           type: string
         Status:
-          $ref: '#/components/schemas/JobStatus'
+          $ref: "#/components/schemas/JobStatus"
         Type:
-          type: string 
+          type: string
           enum:
             - Project
             - Service
@@ -483,7 +494,7 @@ components:
         ISO8601StartTime:
           type: string
         ScheduleRate:
-          $ref: '#/components/schemas/ScheduleRate'
+          $ref: "#/components/schemas/ScheduleRate"
         StartTime:
           type: string
     Schedule:
@@ -502,7 +513,7 @@ components:
         Blocks:
           type: array
           items:
-            $ref: '#/components/schemas/ScheduleBlock'
+            $ref: "#/components/schemas/ScheduleBlock"
         Date:
           type: string
         DateModified:
@@ -515,7 +526,7 @@ components:
         Reference:
           type: string
         Staff:
-          $ref: '#/components/schemas/Staff'
+          $ref: "#/components/schemas/Staff"
         Type:
           type: string
           enum:
