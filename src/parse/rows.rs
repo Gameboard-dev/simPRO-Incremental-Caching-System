@@ -42,20 +42,32 @@ impl<'a> TryFrom<&'a api::Job> for NewCompanyCustomer<'a> {
     type Error = anyhow::Error;
     fn try_from(job: &'a api::Job) -> anyhow::Result<Self> {
         Ok(Self {
-            id: job.customer.id.parse::<i64>()?,
+            id: job.customer.id,
             company_name: &job.customer.company_name,
         })
     }
 }
 
+impl<'a> TryFrom<&'a api::Job> for NewJobStatuse<'a> {
+    type Error = anyhow::Error;
+    fn try_from(job: &'a api::Job) -> anyhow::Result<Self> {
+        Ok(Self {
+            id: job.status.id,
+            color: &job.status.color,
+            name: &job.status.name,
+        })
+    }
+}
+
+
 impl<'a> TryFrom<&'a api::Schedule> for NewSchedule<'a> {
     type Error = anyhow::Error;
     fn try_from(record: &'a api::Schedule) -> anyhow::Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             date_modified: DateTime::parse_from_rfc3339(&record.date_modified)?.with_timezone(&Utc),
             notes: Some(&record.notes),
-            staff_id: record.staff.id.parse::<i64>()?,
+            staff_id: record.staff.id,
             schedule_type: record.type_.into(),
         })
     }
@@ -66,7 +78,7 @@ impl<'a> TryFrom<&'a api::Activity> for NewActivity<'a> {
 
     fn try_from(record: &'a api::Activity) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             name: &record.name,
         })
     }
@@ -77,7 +89,7 @@ impl<'a> TryFrom<&'a api::CostCenter> for NewCostCenter<'a> {
 
     fn try_from(record: &'a api::CostCenter) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             name: &record.name,
         })
     }
@@ -88,7 +100,7 @@ impl<'a> TryFrom<&'a api::Employee> for NewEmployee<'a> {
 
     fn try_from(record: &'a api::Employee) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             name: &record.name,
         })
     }
@@ -99,7 +111,7 @@ impl<'a> TryFrom<&'a api::Lead> for NewLead<'a> {
 
     fn try_from(record: &'a api::Lead) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             name: &record.name,
         })
     }
@@ -108,9 +120,9 @@ impl<'a> TryFrom<&'a api::Lead> for NewLead<'a> {
 impl<'a> TryFrom<&'a api::Quote> for NewQuote<'a> {
     type Error = anyhow::Error;
 
-    fn try_from(record: &'a api::Quote) -> Result<Self> {
+    fn try_from(record: &'a api::Quote) -> anyhow::Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             name: &record.name,
         })
     }
@@ -121,7 +133,7 @@ impl<'a> TryFrom<&'a api::ScheduleRate> for NewScheduleRate<'a> {
 
     fn try_from(record: &'a api::ScheduleRate) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             name: &record.name,
         })
     }
@@ -132,7 +144,7 @@ impl<'a> TryFrom<&'a api::JobStatus> for NewJobStatuse<'a> {
 
     fn try_from(record: &'a api::JobStatus) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             name: &record.name,
             color: &record.color,
         })
@@ -144,7 +156,7 @@ impl<'a> TryFrom<&'a api::Site> for NewSite<'a> {
 
     fn try_from(record: &'a api::Site) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
             address_address: Some(&record.address.address),
             address_city: Some(&record.address.city),
             address_country: Some(&record.address.country),
@@ -159,18 +171,18 @@ impl<'a> TryFrom<&'a api::Job> for NewJob<'a> {
 
     fn try_from(record: &'a api::Job) -> Result<Self> {
         Ok(Self {
-            id: record.id.parse::<i64>()?,
+            id: record.id,
 
-            customer_id: record.customer.id.parse::<i64>()?,
+            customer_id: record.customer.id,
 
             date_modified: DateTime::parse_from_rfc3339(&record.date_modified)?.with_timezone(&Utc),
 
             description: record.description.as_deref().unwrap_or_default(),
 
             name: &record.name,
-            site_id: record.site.id.parse::<i64>()?,
+            site_id: record.site.id,
             stage: &record.stage,
-            status_id: record.status.id.parse::<i64>()?,
+            status_id: record.status.id,
             job_type: record.type_.into(),
         })
     }
@@ -187,7 +199,7 @@ impl<'a> TryFrom<(&'a api::ScheduleBlock, i64)> for NewScheduleBlock {
 
             iso8601_end_time: DateTime::parse_from_rfc3339(&record.iso8601_end_time)?.with_timezone(&Utc),
 
-            schedule_rate: record.schedule_rate.id.parse::<i64>()?,
+            schedule_rate: record.schedule_rate.id,
         })
     }
 }

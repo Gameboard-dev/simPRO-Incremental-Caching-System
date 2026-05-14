@@ -10,7 +10,7 @@ const BUFFER_LENGTH: usize =
     Resource::COUNT * Operation::COUNT;
 
 /// An array of record IDs indexed by Resource and Operation:
-pub type Buffer = [Vec<u64>; BUFFER_LENGTH];
+pub type Buffer = [Vec<i64>; BUFFER_LENGTH];
 
 #[derive(Debug)]
 /// Thread-safe buffer containing record IDs pending retrieval.

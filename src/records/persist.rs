@@ -15,6 +15,7 @@ use diesel_async::RunQueryDsl;
 use diesel_async::pooled_connection::deadpool::Object;
 use std::collections::HashSet;
 use std::sync::Arc;
+use tokio::fs::read_link;
 
 /// A macro expression that generates Diesel `ON CONFLICT DO UPDATE` assignments
 /// equivalent to SQL: `UPDATE SET column = EXCLUDED.column` which matches one or more
@@ -52,56 +53,75 @@ impl Resource {
                     .await?;
             }
             Records::Job(records) => {
-                use crate::db::table::company_customers::dsl::{
-                    company_customers, company_name, id as company_customer_id,
-                };
-                use crate::db::table::jobs::dsl::{
-                    customer_id, date_modified, description, id as job_id, job_type, jobs, name, site_id, stage,
-                    status_id,
-                };
+                let connection: &mut AsyncPgConnection = &mut **connection;
+                // ------------------------------------------------------------------------------------
+                connection
+                    .transaction::<_, anyhow::Error, _>(async move |conn| {
+                        // -----------------------------> JOB STATUSES
+                        {
+                            use crate::db::table::job_statuses::dsl::*;
+                            // ------------------------------------------------------------------------------------
+                            let rows = records
+                                .iter()
+                                .map(|job| insertables::NewJobStatuse::try_from(&job.status))
+                                .collect::<Result<Vec<_>, _>>()?;
+                            // ------------------------------------------------------------------------------------
+                            diesel::insert_into(job_statuses)
+                                .values(rows)
+                                .on_conflict(id)
+                                .do_update()
+                                .set(to_update!(name, color))
+                                .execute(&mut *conn)
+                                .await?;
+                        }
+                        // -----------------------------> JOB CUSTOMERS
+                        {
+                            use crate::db::table::company_customers::dsl::*;
+                            // ------------------------------------------------------------------------------------
+                            let rows = records
+                                .iter()
+                                .map(insertables::NewCompanyCustomer::try_from)
+                                .collect::<Result<Vec<_>, _>>()?;
+                            // ------------------------------------------------------------------------------------
+                            diesel::insert_into(company_customers)
+                                .values(rows)
+                                .on_conflict(id)
+                                .do_update()
+                                .set(company_name.eq(diesel::upsert::excluded(company_name)))
+                                .execute(&mut *conn)
+                                .await?;
+                        }
+                        // -----------------------------> JOBS
+                        {
+                            use crate::db::table::jobs::dsl::*;
+                            // ------------------------------------------------------------------------------------
+                            let rows = records
+                                .iter()
+                                .map(insertables::NewJob::try_from)
+                                .collect::<Result<Vec<_>, _>>()?;
+                            // ------------------------------------------------------------------------------------
+                            diesel::insert_into(jobs)
+                                .values(rows)
+                                .on_conflict(id)
+                                .do_update()
+                                .set(to_update!(
+                                    name,
+                                    customer_id,
+                                    date_modified,
+                                    description,
+                                    site_id,
+                                    stage,
+                                    status_id,
+                                    job_type
+                                ))
+                                .execute(&mut *conn)
+                                .await?;
+                        }
 
-                let company_customer_rows = records
-                    .iter()
-                    .map(insertables::NewCompanyCustomer::try_from)
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                let job_rows = records
-                    .iter()
-                    .map(insertables::NewJob::try_from)
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                let conn: &mut AsyncPgConnection = &mut **connection;
-                conn.transaction::<_, diesel::result::Error, _>(async move |conn| {
-                    diesel::insert_into(company_customers)
-                        .values(company_customer_rows)
-                        .on_conflict(company_customer_id)
-                        .do_update()
-                        .set(company_name.eq(diesel::upsert::excluded(company_name)))
-                        .execute(&mut *conn)
-                        .await?;
-
-                    diesel::insert_into(jobs)
-                        .values(job_rows)
-                        .on_conflict(job_id)
-                        .do_update()
-                        .set(to_update!(
-                            name,
-                            customer_id,
-                            date_modified,
-                            description,
-                            site_id,
-                            stage,
-                            status_id,
-                            job_type
-                        ))
-                        .execute(&mut *conn)
-                        .await?;
-
-                    Ok(())
-                })
-                .await?;
+                        Ok(())
+                    })
+                    .await?;
             }
-
             Records::Site(records) => {
                 use crate::db::table::sites::dsl::*;
 

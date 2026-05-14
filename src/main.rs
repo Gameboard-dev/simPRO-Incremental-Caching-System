@@ -43,14 +43,16 @@ use tracing::instrument;
 pub type DbPool = Pool<AsyncPgConnection>;
 
 /// Reads a required environment variable.
-/// * Returns a contextualized error if the variable is not present.
+/// * This returns a contextualized error if the variable is not present.
 pub(crate) fn require_env(name: &str) -> anyhow::Result<String> {
     env::var(name).with_context(|| format!("{name} is missing from .env or the environment"))
 }
 
-/// Builds a new Progenitor API `Client`
+/// This builds a new Progenitor API `Client`
 fn build_api_client() -> anyhow::Result<ApiClient> {
     let mut headers = HeaderMap::new();
+    // simPRO offers a fixed `Grant Token` which never needs to be refreshed or revalidated
+    // a more complex alternative would be OAuth2 which requires a managed token lifecycle
     headers.insert(
         AUTHORIZATION,
         format!("Bearer {}", require_env("SIMPRO_API_KEY")?).parse()?,
@@ -93,7 +95,7 @@ pub struct AppState {
     pub webhook_events: EventBuffer,
     pub webhook_events_path: PathBuf,
     pub db_connection_pool: DbPool,
-    sync_threshold: usize,
+    pub sync_threshold: usize,
 }
 
 pub async fn build_app_state(api: ApiClient) -> anyhow::Result<AppState> {
@@ -153,7 +155,7 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
     let events: Buffer = app.webhook_events.snapshot();
     // --------------------------------------------------------
     #[cfg(debug_assertions)]
-    tracing::debug!(?events, "Synchronizing events");
+    tracing::debug!(?events, "Synchronizing");
     // --------------------------------------------------------
     for (i, record_ids) in events.iter().enumerate() {
         if !record_ids.is_empty() {
@@ -162,10 +164,10 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
             #[cfg(debug_assertions)]
             tracing::debug!(pair = ?(resource, operation), "Hydrating and Persisting");
             // --------------------------------------------------------
-            let records: Records = resource.get_records(record_ids, app.clone()).await?;
+            let batches: Vec<Records> = resource.get_records(record_ids, app.clone()).await?;
             // --------------------------------------------------------
             #[cfg(debug_assertions)]
-            tracing::debug!(?records, "Upserting");
+            tracing::debug!(?batches, "Upserting");
             // --------------------------------------------------------
             let pool = app.db_connection_pool.clone();
             // --------------------------------------------------------------------
@@ -173,7 +175,13 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
             // This uses `diesel-async` crate rather than `tokio::task::spawn_blocking`.
             // --------------------------------------------------------------------
             let mut conn = pool.get().await?;
-            resource.upsert_records(records, &mut conn).await?;
+            // --------------------------------------------------------------------
+            // Batches contains a list of records in dependency order 
+            // for upsertion into the database
+            // --------------------------------------------------------------------
+            for records in batches {
+                resource.upsert_records(records, &mut conn).await?;
+            }
         }
     }
     // --------------------------------------------------------------------
@@ -210,6 +218,9 @@ async fn sync_worker(app: Arc<AppState>, seconds: Duration) {
     }
 }
 
+/// ```bash
+/// docker compose --profile dev up --build
+/// ```
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // ------------------------------------------------------
@@ -223,8 +234,7 @@ async fn main() -> anyhow::Result<()> {
     let app_state: Arc<AppState> = Arc::new(app_state);
     // ------------------------------------------------------
     let seconds: u64 = require_env("DATABASE_SYNC_INTERVAL")?.parse::<u64>()?;
-    let sync_task: JoinHandle<()> =
-        tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));
+    let sync_task: JoinHandle<()> = tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));
     // ------------------------------------------------------
     serve(app_state).await?;
     // ------------------------------------------------------

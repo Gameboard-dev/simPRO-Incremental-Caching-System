@@ -32,29 +32,29 @@ impl WebhookPayload {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookReference {
     #[serde(rename = "companyID")]
-    pub company_id: Option<u64>,
+    pub company_id: Option<i64>,
 
     #[serde(rename = "costCenterID")]
-    pub cost_center_id: Option<u64>,
+    pub cost_center_id: Option<i64>,
 
     #[serde(rename = "jobID")]
-    pub job_id: Option<u64>,
+    pub job_id: Option<i64>,
 
     #[serde(rename = "scheduleID")]
-    pub schedule_id: Option<u64>,
+    pub schedule_id: Option<i64>,
 
     #[serde(rename = "sectionID")]
-    pub section_id: Option<u64>,
+    pub section_id: Option<i64>,
 
     #[serde(rename = "siteID")]
-    pub site_id: Option<u64>,
+    pub site_id: Option<i64>,
 }
 
 impl WebhookReference {
     pub fn id_for(
         &self,
         resource: &Resource,
-    ) -> Option<u64> {
+    ) -> Option<i64> {
         match resource {
             Resource::Job => self.job_id,
             Resource::Site => self.site_id,

@@ -11,6 +11,7 @@ paths:
       operationId: getCustomers
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -34,6 +35,7 @@ paths:
       operationId: getEmployees
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -57,6 +59,7 @@ paths:
       operationId: getCostCenters
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -80,6 +83,7 @@ paths:
       operationId: getJobs
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -103,6 +107,7 @@ paths:
       operationId: getSchedules
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -129,6 +134,7 @@ paths:
       operationId: getActivities
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -152,6 +158,7 @@ paths:
       operationId: getSites
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -175,6 +182,7 @@ paths:
       operationId: getLeads
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -198,6 +206,7 @@ paths:
       operationId: getQuotes
       parameters:
       - $ref: '#/components/parameters/search'
+      - $ref: '#/components/parameters/ID'
       - $ref: '#/components/parameters/columns'
       - $ref: '#/components/parameters/pageSize'
       - $ref: '#/components/parameters/page'
@@ -233,6 +242,11 @@ components:
       schema:
         type: string
       description: Search result must have a match on all provided fields or a match on any of the provided fields.
+    ID:
+      name: ID
+      in: query
+      schema:
+        type: string
     columns:
       name: columns
       in: query
@@ -316,7 +330,8 @@ components:
         DateModified:
           type: string
         ID:
-          type: string
+          type: integer
+          format: int64
     Activity:
       type: object
       required:
@@ -324,7 +339,8 @@ components:
         - Name
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
     Staff:
@@ -333,7 +349,8 @@ components:
         - ID
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
     CostCenter:
@@ -343,7 +360,8 @@ components:
         - Name
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
     Customer:
@@ -353,7 +371,8 @@ components:
         - CompanyName
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         CompanyName:
           type: string
     Employee:
@@ -363,7 +382,8 @@ components:
         - Name
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
         Position:
@@ -375,14 +395,14 @@ components:
         - Name
         - Customer
         - DateModified
-        - Reference
         - Site
         - Stage
         - Status
         - Type
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
         Customer:
@@ -410,14 +430,16 @@ components:
         - Name
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
     Section:
       type: object
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
     JobSite:
@@ -427,7 +449,8 @@ components:
         - Name
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
     JobStatus:
@@ -438,7 +461,8 @@ components:
         - Color
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
         Color:
@@ -484,7 +508,8 @@ components:
         DateModified:
           type: string
         ID:
-          type: string
+          type: integer
+          format: int64
         Notes:
           type: string
         Reference:
@@ -505,7 +530,8 @@ components:
         - Name
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string
     Lead:
@@ -515,6 +541,7 @@ components:
         - Name
       properties:
         ID:
-          type: string
+          type: integer
+          format: int64
         Name:
           type: string

@@ -1,6 +1,5 @@
-use std::sync::Arc;
-
 use crate::{AppState, api::types as api, parse::reference::IDs, webhook::variants::Resource};
+use std::sync::Arc;
 
 /// Enum of records returned by API endpoints
 #[derive(Debug)]
@@ -23,20 +22,22 @@ impl Resource {
     /// * [Schedule](https://developer.simprogroup.com/apidoc/?page=ccdb7bf9d93e5652b57cabcc8c41e061#tag/Schedules/operation/4a005958478750b0f96cb00b3c9da0f6)
     #[allow(unused)]
     #[tracing::instrument(skip(self, ids, app))]
-    pub(crate) async fn get_records(&self, ids: &[u64], app: Arc<AppState>) -> anyhow::Result<Records> {
+    pub(crate) async fn get_records(
+        &self,
+        ids: &[i64],
+        app: Arc<AppState>,
+    ) -> anyhow::Result<Vec<Records>> {
         use crate::api::Columns;
 
-        let id_search = format!(
-            "ID=in({})",
-            ids.iter().map(|id| id.to_string()).collect::<Vec<_>>().join(",")
-        );
+        let ids: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
+        let ids = format!("in({})", ids.join(","));
 
         let records = match self {
             Resource::Schedule => {
-                let records: Vec<api::Schedule> = app
+                let schedules: Vec<api::Schedule> = app
                     .api
                     .get_schedules()
-                    .search(id_search)
+                    .id(ids)
                     .columns(api::Schedule::COLUMNS.join(","))
                     .company_id(&app.company_id)
                     .send()
@@ -45,107 +46,125 @@ impl Resource {
                     .into_inner();
 
                 let mut bin = IDs::default();
-                for record in &records {
-                    record.parse_id_reference(&mut bin)?;
+
+                for schedule in &schedules {
+                    schedule.parse_id_reference(&mut bin)?;
                 }
 
+                let mut records = vec![];
                 for (ids, resource) in bin.resources() {
                     if ids.is_empty() {
                         continue;
                     }
-                    Box::pin(resource.get_records(ids, app.clone())).await?;
+                    // Recursive async futures have an indeterminate size at compile time.
+                    // `Box::pin` allocates the future on the heap with a stable memory address,
+                    // allowing recursive async calls without creating potentially infinitely-sized futures.
+                    records.extend(Box::pin(resource.get_records(ids, app.clone())).await?);
                 }
 
-                Records::Schedule(records)
+                // --------------------------------------------------------------------------------------
+                // Record arrays are returned in database dependency order
+                records.push(Records::Schedule(schedules));
+                records
             }
 
-            Resource::CostCenter => Records::CostCenter(
+            Resource::Job => {
+                let jobs: Vec<api::Job> = app
+                    .api
+                    .get_jobs()
+                    .id(ids)
+                    .columns(api::Job::COLUMNS.join(","))
+                    .company_id(&app.company_id)
+                    .send()
+                    .await
+                    .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Job'"))?
+                    .into_inner();
+                // --------------------------------------------------------------------------------------
+                let site_ids: Vec<i64> = jobs.iter().map(|job| job.site.id).collect();
+                // --------------------------------------------------------------------------------------
+                let mut sites: Records =
+                    Box::pin(Resource::Site.get_records(&site_ids, app.clone()))
+                        .await?
+                        .pop()
+                        .ok_or_else(|| anyhow::anyhow!("Expected site records"))?;
+                // --------------------------------------------------------------------------------------
+                // Record arrays are returned in database dependency order
+                vec![sites, Records::Job(jobs)]
+            }
+
+            Resource::CostCenter => vec![Records::CostCenter(
                 app.api
                     .get_cost_centers()
-                    .search(id_search)
+                    .id(ids)
                     .columns(api::CostCenter::COLUMNS.join(","))
                     .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Cost Center'"))?
                     .into_inner(),
-            ),
+            )],
 
-            Resource::Quote => Records::Quote(
+            Resource::Quote => vec![Records::Quote(
                 app.api
                     .get_quotes()
-                    .search(id_search)
+                    .id(ids)
                     .columns(api::Quote::COLUMNS.join(","))
                     .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Quote'"))?
                     .into_inner(),
-            ),
+            )],
 
-            Resource::Lead => Records::Lead(
+            Resource::Lead => vec![Records::Lead(
                 app.api
                     .get_leads()
-                    .search(id_search)
+                    .id(ids)
                     .columns(api::Lead::COLUMNS.join(","))
                     .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Lead'"))?
                     .into_inner(),
-            ),
+            )],
 
-            Resource::Job => Records::Job(
-                app.api
-                    .get_jobs()
-                    .search(id_search)
-                    .columns(api::Job::COLUMNS.join(","))
-                    .company_id(&app.company_id)
-                    .send()
-                    .await
-                    .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Job'"))?
-                    .into_inner(),
-            ),
-
-            Resource::Site => Records::Site(
+            Resource::Site => vec![Records::Site(
                 app.api
                     .get_sites()
-                    .search(id_search)
+                    .id(ids)
                     .columns(api::Site::COLUMNS.join(","))
                     .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Site'"))?
                     .into_inner(),
-            ),
+            )],
 
-            Resource::Employee => Records::Employee(
+            Resource::Employee => vec![Records::Employee(
                 app.api
                     .get_employees()
-                    .search(id_search)
+                    .id(ids)
                     .columns(api::Employee::COLUMNS.join(","))
                     .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Employee'"))?
                     .into_inner(),
-            ),
+            )],
 
-            Resource::Activity => Records::Activity(
+            Resource::Activity => vec![Records::Activity(
                 app.api
                     .get_activities()
-                    .search(id_search)
+                    .id(ids)
                     .columns(api::Activity::COLUMNS.join(","))
                     .company_id(&app.company_id)
                     .send()
                     .await
                     .inspect_err(|err| tracing::error!(?err, "Failed to fetch 'Activity'"))?
                     .into_inner(),
-            ),
+            )],
         };
 
-
-
-        return Ok(records);
+        Ok(records)
     }
 }

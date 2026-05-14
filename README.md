@@ -130,3 +130,13 @@ To ensure Ngrok is listening, visit the following URL:
 http://localhost:4040/inspect/http
 ```
 
+### Hard Reset
+
+```bash
+docker compose down -v --remove-orphans
+docker rm -f postgres simpro-ingestion-service-1 simpro-schema-db 2>/dev/null || true
+docker network disconnect -f simpro-schema-net simpro-schema-db 2>/dev/null || true
+docker network rm simpro-schema-net 2>/dev/null || true
+docker network prune -f
+docker compose --profile dev up --build
+```

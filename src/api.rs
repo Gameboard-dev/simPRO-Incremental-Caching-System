@@ -54,7 +54,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -66,7 +67,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct Activity {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -153,7 +154,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -165,7 +167,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct CostCenter {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -195,7 +197,8 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    }
     ///  }
     ///}
@@ -206,7 +209,7 @@ pub mod types {
         #[serde(rename = "CompanyName")]
         pub company_name: ::std::string::String,
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
     }
     impl ::std::convert::From<&Customer> for Customer {
         fn from(value: &Customer) -> Self {
@@ -231,7 +234,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -246,7 +250,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct Employee {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
         #[serde(
@@ -278,7 +282,6 @@ pub mod types {
     ///    "DateModified",
     ///    "ID",
     ///    "Name",
-    ///    "Reference",
     ///    "Site",
     ///    "Stage",
     ///    "Status",
@@ -295,7 +298,8 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -334,11 +338,9 @@ pub mod types {
         )]
         pub description: ::std::option::Option<::std::string::String>,
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
-        #[serde(rename = "Reference")]
-        pub reference: ::serde_json::Value,
         #[serde(rename = "Site")]
         pub site: JobSite,
         #[serde(rename = "Stage")]
@@ -371,7 +373,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -383,7 +386,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct JobSite {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -414,7 +417,8 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -428,7 +432,7 @@ pub mod types {
         #[serde(rename = "Color")]
         pub color: ::std::string::String,
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -538,7 +542,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -550,7 +555,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct Lead {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -577,7 +582,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -589,7 +595,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct Quote {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -635,7 +641,8 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Notes": {
     ///      "type": "string"
@@ -668,7 +675,7 @@ pub mod types {
         #[serde(rename = "DateModified")]
         pub date_modified: ::std::string::String,
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::serde_json::Value,
         #[serde(rename = "Notes")]
@@ -775,7 +782,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -787,7 +795,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ScheduleRate {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -901,7 +909,8 @@ pub mod types {
     ///  "type": "object",
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -917,7 +926,7 @@ pub mod types {
             default,
             skip_serializing_if = "::std::option::Option::is_none"
         )]
-        pub id: ::std::option::Option<::std::string::String>,
+        pub id: ::std::option::Option<i64>,
         #[serde(
             rename = "Name",
             default,
@@ -964,7 +973,8 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -980,7 +990,7 @@ pub mod types {
         #[serde(rename = "DateModified")]
         pub date_modified: ::std::string::String,
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
     }
@@ -1006,7 +1016,8 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "ID": {
-    ///      "type": "string"
+    ///      "type": "integer",
+    ///      "format": "int64"
     ///    },
     ///    "Name": {
     ///      "type": "string"
@@ -1018,7 +1029,7 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct Staff {
         #[serde(rename = "ID")]
-        pub id: ::std::string::String,
+        pub id: i64,
         #[serde(
             rename = "Name",
             default,
@@ -1040,7 +1051,7 @@ pub mod types {
     pub mod builder {
         #[derive(Clone, Debug)]
         pub struct Activity {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for Activity {
@@ -1054,7 +1065,7 @@ pub mod types {
         impl Activity {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1210,7 +1221,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct CostCenter {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for CostCenter {
@@ -1224,7 +1235,7 @@ pub mod types {
         impl CostCenter {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1272,7 +1283,7 @@ pub mod types {
                 ::std::string::String,
                 ::std::string::String,
             >,
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
         }
         impl ::std::default::Default for Customer {
             fn default() -> Self {
@@ -1299,7 +1310,7 @@ pub mod types {
             }
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1331,7 +1342,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct Employee {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
             position: ::std::result::Result<
                 ::std::option::Option<::std::string::String>,
@@ -1350,7 +1361,7 @@ pub mod types {
         impl Employee {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1417,9 +1428,8 @@ pub mod types {
                 ::std::option::Option<::std::string::String>,
                 ::std::string::String,
             >,
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
-            reference: ::std::result::Result<::serde_json::Value, ::std::string::String>,
             site: ::std::result::Result<super::JobSite, ::std::string::String>,
             stage: ::std::result::Result<::std::string::String, ::std::string::String>,
             status: ::std::result::Result<super::JobStatus, ::std::string::String>,
@@ -1435,7 +1445,6 @@ pub mod types {
                     description: Ok(Default::default()),
                     id: Err("no value supplied for id".to_string()),
                     name: Err("no value supplied for name".to_string()),
-                    reference: Err("no value supplied for reference".to_string()),
                     site: Err("no value supplied for site".to_string()),
                     stage: Err("no value supplied for stage".to_string()),
                     status: Err("no value supplied for status".to_string()),
@@ -1484,7 +1493,7 @@ pub mod types {
             }
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1503,18 +1512,6 @@ pub mod types {
                     .try_into()
                     .map_err(|e| {
                         format!("error converting supplied value for name: {}", e)
-                    });
-                self
-            }
-            pub fn reference<T>(mut self, value: T) -> Self
-            where
-                T: ::std::convert::TryInto<::serde_json::Value>,
-                T::Error: ::std::fmt::Display,
-            {
-                self.reference = value
-                    .try_into()
-                    .map_err(|e| {
-                        format!("error converting supplied value for reference: {}", e)
                     });
                 self
             }
@@ -1578,7 +1575,6 @@ pub mod types {
                     description: value.description?,
                     id: value.id?,
                     name: value.name?,
-                    reference: value.reference?,
                     site: value.site?,
                     stage: value.stage?,
                     status: value.status?,
@@ -1594,7 +1590,6 @@ pub mod types {
                     description: Ok(value.description),
                     id: Ok(value.id),
                     name: Ok(value.name),
-                    reference: Ok(value.reference),
                     site: Ok(value.site),
                     stage: Ok(value.stage),
                     status: Ok(value.status),
@@ -1604,7 +1599,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct JobSite {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for JobSite {
@@ -1618,7 +1613,7 @@ pub mod types {
         impl JobSite {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1663,7 +1658,7 @@ pub mod types {
         #[derive(Clone, Debug)]
         pub struct JobStatus {
             color: ::std::result::Result<::std::string::String, ::std::string::String>,
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for JobStatus {
@@ -1690,7 +1685,7 @@ pub mod types {
             }
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1736,7 +1731,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct Lead {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for Lead {
@@ -1750,7 +1745,7 @@ pub mod types {
         impl Lead {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1794,7 +1789,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct Quote {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for Quote {
@@ -1808,7 +1803,7 @@ pub mod types {
         impl Quote {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -1861,7 +1856,7 @@ pub mod types {
                 ::std::string::String,
                 ::std::string::String,
             >,
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::serde_json::Value, ::std::string::String>,
             notes: ::std::result::Result<::std::string::String, ::std::string::String>,
             reference: ::std::result::Result<
@@ -1929,7 +1924,7 @@ pub mod types {
             }
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -2188,7 +2183,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct ScheduleRate {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for ScheduleRate {
@@ -2202,7 +2197,7 @@ pub mod types {
         impl ScheduleRate {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -2246,10 +2241,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct Section {
-            id: ::std::result::Result<
-                ::std::option::Option<::std::string::String>,
-                ::std::string::String,
-            >,
+            id: ::std::result::Result<::std::option::Option<i64>, ::std::string::String>,
             name: ::std::result::Result<
                 ::std::option::Option<::std::string::String>,
                 ::std::string::String,
@@ -2266,7 +2258,7 @@ pub mod types {
         impl Section {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::option::Option<::std::string::String>>,
+                T: ::std::convert::TryInto<::std::option::Option<i64>>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -2315,7 +2307,7 @@ pub mod types {
                 ::std::string::String,
                 ::std::string::String,
             >,
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
         }
         impl ::std::default::Default for Site {
@@ -2359,7 +2351,7 @@ pub mod types {
             }
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -2407,7 +2399,7 @@ pub mod types {
         }
         #[derive(Clone, Debug)]
         pub struct Staff {
-            id: ::std::result::Result<::std::string::String, ::std::string::String>,
+            id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<
                 ::std::option::Option<::std::string::String>,
                 ::std::string::String,
@@ -2424,7 +2416,7 @@ pub mod types {
         impl Staff {
             pub fn id<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::string::String>,
+                T: ::std::convert::TryInto<i64>,
                 T::Error: ::std::fmt::Display,
             {
                 self.id = value
@@ -2542,6 +2534,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2551,6 +2544,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_customers()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2573,6 +2567,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2582,6 +2577,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_employees()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2604,6 +2600,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2613,6 +2610,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_cost_centers()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2635,6 +2633,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2644,6 +2643,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_jobs()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2666,6 +2666,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `job_id`: Filter schedules by job ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().
 - `lead_id`: Filter schedules by lead ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().
 - `quote_id`: Filter schedules by quote ID. Supports operators: lt(), le(), gt(), ge(), ne(), between(), in(), !in().
@@ -2678,6 +2679,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_schedules()
     .company_id(company_id)
+    .id(id)
     .job_id(job_id)
     .lead_id(lead_id)
     .quote_id(quote_id)
@@ -2703,6 +2705,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2712,6 +2715,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_activities()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2734,6 +2738,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2743,6 +2748,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_sites()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2765,6 +2771,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2774,6 +2781,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_leads()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2796,6 +2804,7 @@ Arguments:
 - `company_id`: (Required) A build with Multi-company setup may have companyID >= 0, other builds use 0 by default.<br />
 For more information about Multi-company, see:<br />
 https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.htm
+- `id`
 - `columns`: When listing or searching a resource, specify which columns to be displayed
 - `limit`: Set the limit of number of records in a request
 - `orderby`: Set the order of the requested records, by prefixing '-' on the column name you can get records by descending order. Comma separated list can also be provided.
@@ -2805,6 +2814,7 @@ https://helpguide.simprogroup.com/Content/Service-and-Enterprise/Multi-company.h
 ```ignore
 let response = client.get_quotes()
     .company_id(company_id)
+    .id(id)
     .columns(columns)
     .limit(limit)
     .orderby(orderby)
@@ -2834,6 +2844,7 @@ pub mod builder {
     pub struct GetCustomers<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -2846,6 +2857,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -2862,6 +2874,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -2951,6 +2976,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -2959,6 +2985,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -2985,6 +3012,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -3022,6 +3050,7 @@ pub mod builder {
     pub struct GetEmployees<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -3034,6 +3063,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -3050,6 +3080,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -3139,6 +3182,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -3147,6 +3191,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -3173,6 +3218,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -3210,6 +3256,7 @@ pub mod builder {
     pub struct GetCostCenters<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -3222,6 +3269,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -3238,6 +3286,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -3327,6 +3388,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -3335,6 +3397,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -3361,6 +3424,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -3398,6 +3462,7 @@ pub mod builder {
     pub struct GetJobs<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -3410,6 +3475,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -3426,6 +3492,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -3515,6 +3594,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -3523,6 +3603,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -3549,6 +3630,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -3586,6 +3668,7 @@ pub mod builder {
     pub struct GetSchedules<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         job_id: Result<Option<::std::string::String>, String>,
         lead_id: Result<Option<::std::string::String>, String>,
         quote_id: Result<Option<::std::string::String>, String>,
@@ -3601,6 +3684,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 job_id: Ok(None),
                 lead_id: Ok(None),
                 quote_id: Ok(None),
@@ -3620,6 +3704,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -3748,6 +3845,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 job_id,
                 lead_id,
                 quote_id,
@@ -3759,6 +3857,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let job_id = job_id.map_err(Error::InvalidRequest)?;
             let lead_id = lead_id.map_err(Error::InvalidRequest)?;
             let quote_id = quote_id.map_err(Error::InvalidRequest)?;
@@ -3788,6 +3887,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(&progenitor_middleware_client::QueryParam::new("JobID", &job_id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("LeadID", &lead_id),
@@ -3832,6 +3932,7 @@ pub mod builder {
     pub struct GetActivities<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -3844,6 +3945,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -3860,6 +3962,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -3949,6 +4064,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -3957,6 +4073,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -3983,6 +4100,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -4020,6 +4138,7 @@ pub mod builder {
     pub struct GetSites<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -4032,6 +4151,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -4048,6 +4168,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -4137,6 +4270,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -4145,6 +4279,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -4171,6 +4306,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -4208,6 +4344,7 @@ pub mod builder {
     pub struct GetLeads<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -4220,6 +4357,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -4236,6 +4374,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -4325,6 +4476,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -4333,6 +4485,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -4359,6 +4512,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -4396,6 +4550,7 @@ pub mod builder {
     pub struct GetQuotes<'a> {
         client: &'a super::Client,
         company_id: Result<::std::string::String, String>,
+        id: Result<Option<::std::string::String>, String>,
         columns: Result<Option<::std::string::String>, String>,
         limit: Result<Option<::std::string::String>, String>,
         orderby: Result<Option<::std::string::String>, String>,
@@ -4408,6 +4563,7 @@ pub mod builder {
             Self {
                 client: client,
                 company_id: Err("company_id was not initialized".to_string()),
+                id: Ok(None),
                 columns: Ok(None),
                 limit: Ok(None),
                 orderby: Ok(None),
@@ -4424,6 +4580,19 @@ pub mod builder {
                 .try_into()
                 .map_err(|_| {
                     "conversion to `:: std :: string :: String` for company_id failed"
+                        .to_string()
+                });
+            self
+        }
+        pub fn id<V>(mut self, value: V) -> Self
+        where
+            V: std::convert::TryInto<::std::string::String>,
+        {
+            self.id = value
+                .try_into()
+                .map(Some)
+                .map_err(|_| {
+                    "conversion to `:: std :: string :: String` for id failed"
                         .to_string()
                 });
             self
@@ -4513,6 +4682,7 @@ pub mod builder {
             let Self {
                 client,
                 company_id,
+                id,
                 columns,
                 limit,
                 orderby,
@@ -4521,6 +4691,7 @@ pub mod builder {
                 search,
             } = self;
             let company_id = company_id.map_err(Error::InvalidRequest)?;
+            let id = id.map_err(Error::InvalidRequest)?;
             let columns = columns.map_err(Error::InvalidRequest)?;
             let limit = limit.map_err(Error::InvalidRequest)?;
             let orderby = orderby.map_err(Error::InvalidRequest)?;
@@ -4547,6 +4718,7 @@ pub mod builder {
                     ::reqwest::header::ACCEPT,
                     ::reqwest::header::HeaderValue::from_static("application/json"),
                 )
+                .query(&progenitor_middleware_client::QueryParam::new("ID", &id))
                 .query(
                     &progenitor_middleware_client::QueryParam::new("columns", &columns),
                 )
@@ -4611,7 +4783,6 @@ impl Columns for types::Job {
         "DateModified",
         "ID",
         "Name",
-        "Reference",
         "Site",
         "Stage",
         "Status",

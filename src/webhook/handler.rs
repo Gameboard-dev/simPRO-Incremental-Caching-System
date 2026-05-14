@@ -95,7 +95,7 @@ pub fn verify_signature(
 
 pub fn parse_webhook(
     body: Bytes,
-) -> anyhow::Result<(Resource, Operation, u64)> {
+) -> anyhow::Result<(Resource, Operation, i64)> {
     // --------------------------------------------------------
     let payload: WebhookPayload = serde_json::from_slice(&body)?;
     // --------------------------------------------------------
@@ -106,7 +106,7 @@ pub fn parse_webhook(
         .operation()
         .context("Webhook: Missing 'operation'")?;
     // --------------------------------------------------------
-    let resource_id: u64 = payload
+    let resource_id: i64 = payload
         .reference
         .id_for(&resource)
         .context("Webhook: Missing Resource ID")?;

@@ -2,7 +2,6 @@ services:
 
   postgres:
     image: postgres:18
-    container_name: postgres
     restart: unless-stopped
     # Use SSH in Production
     ports:
@@ -39,13 +38,12 @@ services:
     volumes:
       - .:/app
       - cargo_target:/app/target
-    command: cargo run
+    command: ["cargo", "run"]
 
   # https://ngrok.com/docs/using-ngrok-with/docker/compose
   ngrok:
     depends_on: [simpro-ingestion-service]
     image: ngrok/ngrok:latest
-    profiles: [dev]
     restart: unless-stopped
     environment:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
