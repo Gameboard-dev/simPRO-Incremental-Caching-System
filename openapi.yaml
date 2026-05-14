@@ -508,7 +508,6 @@ components:
         - Reference
         - Staff
         - Type
-        - Name
       properties:
         Blocks:
           type: array

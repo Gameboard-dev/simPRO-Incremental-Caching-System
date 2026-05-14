@@ -621,7 +621,6 @@ pub mod types {
     ///    "Date",
     ///    "DateModified",
     ///    "ID",
-    ///    "Name",
     ///    "Notes",
     ///    "Reference",
     ///    "Staff",
@@ -676,8 +675,6 @@ pub mod types {
         pub date_modified: ::std::string::String,
         #[serde(rename = "ID")]
         pub id: i64,
-        #[serde(rename = "Name")]
-        pub name: ::serde_json::Value,
         #[serde(rename = "Notes")]
         pub notes: ::std::string::String,
         #[serde(rename = "Reference")]
@@ -1857,7 +1854,6 @@ pub mod types {
                 ::std::string::String,
             >,
             id: ::std::result::Result<i64, ::std::string::String>,
-            name: ::std::result::Result<::serde_json::Value, ::std::string::String>,
             notes: ::std::result::Result<::std::string::String, ::std::string::String>,
             reference: ::std::result::Result<
                 ::std::string::String,
@@ -1875,7 +1871,6 @@ pub mod types {
                         "no value supplied for date_modified".to_string(),
                     ),
                     id: Err("no value supplied for id".to_string()),
-                    name: Err("no value supplied for name".to_string()),
                     notes: Err("no value supplied for notes".to_string()),
                     reference: Err("no value supplied for reference".to_string()),
                     staff: Err("no value supplied for staff".to_string()),
@@ -1931,18 +1926,6 @@ pub mod types {
                     .try_into()
                     .map_err(|e| {
                         format!("error converting supplied value for id: {}", e)
-                    });
-                self
-            }
-            pub fn name<T>(mut self, value: T) -> Self
-            where
-                T: ::std::convert::TryInto<::serde_json::Value>,
-                T::Error: ::std::fmt::Display,
-            {
-                self.name = value
-                    .try_into()
-                    .map_err(|e| {
-                        format!("error converting supplied value for name: {}", e)
                     });
                 self
             }
@@ -2005,7 +1988,6 @@ pub mod types {
                     date: value.date?,
                     date_modified: value.date_modified?,
                     id: value.id?,
-                    name: value.name?,
                     notes: value.notes?,
                     reference: value.reference?,
                     staff: value.staff?,
@@ -2020,7 +2002,6 @@ pub mod types {
                     date: Ok(value.date),
                     date_modified: Ok(value.date_modified),
                     id: Ok(value.id),
-                    name: Ok(value.name),
                     notes: Ok(value.notes),
                     reference: Ok(value.reference),
                     staff: Ok(value.staff),
@@ -4773,7 +4754,6 @@ impl Columns for types::Schedule {
         "Date",
         "DateModified",
         "ID",
-        "Name",
         "Notes",
         "Reference",
         "Staff",
