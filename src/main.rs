@@ -9,12 +9,14 @@ pub(crate) mod parse;
 pub(crate) mod records;
 pub(crate) mod webhook;
 pub(crate) mod time;
+pub(crate) mod serve;
 use crate::records::get_records::load_initial_records;
+use crate::serve::serve_requests::requests_handler;
 use crate::webhook::events::{Buffer, EventBuffer};
 use crate::webhook::handler::webhook_handler;
 use anyhow::Context;
 pub use api::Client as ApiClient;
-use axum::{Router, routing::post};
+use axum::{Router, routing::{post, get}};
 use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::pooled_connection::deadpool::Pool;
@@ -135,6 +137,7 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
         TcpListener::bind(address).await?,
         Router::new()
             .route("/webhook/simpro", post(webhook_handler))
+            .route("/events", get(requests_handler))
             //.route("/events", post(fetch_events))
             .layer(TraceLayer::new_for_http())
             .with_state(state),
