@@ -45,6 +45,7 @@ diesel::table! {
     employees (id) {
         id -> Int8,
         name -> Text,
+        position -> Text,
     }
 }
 
@@ -96,7 +97,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    quote_schedules (schedule_id, quote_id) {
+    quote_schedules (schedule_id, quote_id, cost_center_id) {
         cost_center_id -> Int8,
         quote_id -> Int8,
         schedule_id -> Int8,
@@ -111,8 +112,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    schedule_blocks (idx) {
-        idx -> Int8,
+    schedule_blocks (schedule_id, iso8601_start_time, iso8601_end_time) {
         iso8601_end_time -> Timestamptz,
         iso8601_start_time -> Timestamptz,
         schedule_id -> Int8,
@@ -244,6 +244,7 @@ pub struct CostCenter {
 pub struct Employee {
     pub id: i64,
     pub name: String,
+    pub position: String,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Identifiable)]
@@ -293,7 +294,7 @@ pub struct Lead {
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Identifiable)]
-#[diesel(primary_key(schedule_id, quote_id))]
+#[diesel(primary_key(schedule_id, quote_id, cost_center_id))]
 #[diesel(table_name = quote_schedules)]
 pub struct QuoteSchedule {
     pub cost_center_id: i64,
@@ -309,10 +310,9 @@ pub struct Quote {
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Identifiable)]
-#[diesel(primary_key(idx))]
+#[diesel(primary_key(schedule_id, iso8601_start_time, iso8601_end_time))]
 #[diesel(table_name = schedule_blocks)]
 pub struct ScheduleBlock {
-    pub idx: i64,
     pub iso8601_end_time: DateTime<Utc>,
     pub iso8601_start_time: DateTime<Utc>,
     pub schedule_id: i64,
@@ -388,6 +388,7 @@ pub struct NewCostCenter<'a> {
 pub struct NewEmployee<'a> {
     pub id: i64,
     pub name: &'a str,
+    pub position: &'a str,
 }
 #[derive(Insertable)]
 #[diesel(table_name = job_schedules)]

@@ -7,16 +7,21 @@ pub(crate) mod api;
 pub(crate) mod db;
 pub(crate) mod parse;
 pub(crate) mod records;
-pub(crate) mod webhook;
-pub(crate) mod time;
 pub(crate) mod serve;
+pub(crate) mod time;
+pub(crate) mod webhook;
 use crate::records::get_records::load_initial_records;
-use crate::serve::serve_requests::requests_handler;
+use crate::records::remove_records::IDS_DELETED;
+use crate::serve::serve::requests_handler;
 use crate::webhook::events::{Buffer, EventBuffer};
 use crate::webhook::handler::webhook_handler;
+use crate::webhook::variants::Operation;
 use anyhow::Context;
 pub use api::Client as ApiClient;
-use axum::{Router, routing::{post, get}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::pooled_connection::deadpool::Pool;
@@ -138,7 +143,6 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
         Router::new()
             .route("/webhook/simpro", post(webhook_handler))
             .route("/events", get(requests_handler))
-            //.route("/events", post(fetch_events))
             .layer(TraceLayer::new_for_http())
             .with_state(state),
     )
@@ -165,15 +169,7 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
     for (i, record_ids) in events.iter().enumerate() {
         if !record_ids.is_empty() {
             let (resource, operation) = EventBuffer::reverse_index(i);
-            // --------------------------------------------------------
-            #[cfg(debug_assertions)]
-            tracing::debug!(pair = ?(resource, operation), "Hydrating and Persisting");
-            // --------------------------------------------------------
-            let batches: Vec<Records> = resource.get_records_by_id(record_ids, app.clone()).await?;
-            // --------------------------------------------------------
-            #[cfg(debug_assertions)]
-            tracing::debug!(?batches, "Upserting");
-            // --------------------------------------------------------
+            // --------------------------------------------------------------------
             let pool = app.db_connection_pool.clone();
             // --------------------------------------------------------------------
             // Diesel's native PgConnection API is synchronous/blocking.
@@ -181,11 +177,46 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
             // --------------------------------------------------------------------
             let mut conn = pool.get().await?;
             // --------------------------------------------------------------------
-            // Batches contains a list of records in dependency order 
-            // for upsertion into the database
-            // --------------------------------------------------------------------
-            for records in batches {
-                records.resource().upsert_records(records, &mut conn).await?;
+            match operation {
+                Operation::Deleted => {
+                    // ----------------------------------------------------------------------------------------------------
+                    // Remove the corresponding schedules by ID from the database when a deletion webhook is recieved
+                    // to avoid returning stale data for clients requesting Engineer bookings.
+                    // ----------------------------------------------------------------------------------------------------
+                    resource.remove_records_by_id(record_ids, &mut conn).await?;
+                    // ----------------------------------------------------------------------------------------------------
+                    // Add deleted IDs to a hashmap per resource to deal with the scenario where a 
+                    // DELETED webhook is recieved and synchronized before the CREATED webhook is recieved.
+                    // `extend` ignores duplicates because `IDS_DELETED` is a `HashSet`.
+                    // ----------------------------------------------------------------------------------------------------
+                    IDS_DELETED[resource as usize]
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .extend(record_ids);
+                    // ----------------------------------------------------------------------------------------------------
+                }
+                Operation::Created | Operation::Updated => {
+                    // --------------------------------------------------------------------------------
+                    #[cfg(debug_assertions)]
+                    tracing::debug!(pair = ?(resource, operation), "Hydrating and Persisting");
+                    // --------------------------------------------------------------------------------
+
+                    // --------------------------------------------------------------------------------
+                    let records_variants: Vec<Records> =
+                        resource.get_records_by_id(record_ids, app.clone()).await?;
+                    // --------------------------------------------------------
+                    #[cfg(debug_assertions)]
+                    tracing::debug!(?records_variants, "Upserting");
+                    // --------------------------------------------------------------------------------------------
+                    // Database upsertion (INSERT OR UPDATE) using dependency-ordered array of record arrays
+                    // --------------------------------------------------------------------------------------------
+                    for records in records_variants {
+                        records
+                            .resource()
+                            .upsert_records(records, &mut conn)
+                            .await?;
+                    }
+                }
             }
         }
     }
@@ -238,10 +269,11 @@ async fn main() -> anyhow::Result<()> {
     let app_state: AppState = build_app_state(client).await?;
     let app_state: Arc<AppState> = Arc::new(app_state);
     // ------------------------------------------------------
-    load_initial_records(app_state.clone());
+    load_initial_records(app_state.clone()).await?;
     // ------------------------------------------------------
     let seconds: u64 = require_env("DATABASE_SYNC_INTERVAL")?.parse::<u64>()?;
-    let sync_task: JoinHandle<()> = tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));
+    let sync_task: JoinHandle<()> =
+        tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));
     // ------------------------------------------------------
     serve(app_state).await?;
     // ------------------------------------------------------

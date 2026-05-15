@@ -391,6 +391,7 @@ components:
       required:
         - ID
         - Name
+        - Position
       properties:
         ID:
           type: integer

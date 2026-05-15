@@ -43,6 +43,7 @@ diesel-async = { version = "0.9.0", features = ["postgres", "deadpool"] }
 # JSON DESERIALIZATION
 # ----------------------------
 serde = { version = "1.0", features = ["derive"], default-features = false }
+serde_with = "3.20"
 serde_json = "1.0"
 # ----------------------------
 # ENVIRONMENT VARIABLES
@@ -67,7 +68,7 @@ tower-http = { version = "0.6", features = ["trace"] }
 tracing-error = "0.2.1"
 strum = "0.28.0"
 strum_macros = "0.28.0"
-chrono = "0.4.44"
+chrono = { version = "0.4", features = ["serde"] }
 
 
 # https://github.com/oxidecomputer/progenitor#buildrs

@@ -230,7 +230,8 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "ID",
-    ///    "Name"
+    ///    "Name",
+    ///    "Position"
     ///  ],
     ///  "properties": {
     ///    "ID": {
@@ -253,12 +254,8 @@ pub mod types {
         pub id: i64,
         #[serde(rename = "Name")]
         pub name: ::std::string::String,
-        #[serde(
-            rename = "Position",
-            default,
-            skip_serializing_if = "::std::option::Option::is_none"
-        )]
-        pub position: ::std::option::Option<::std::string::String>,
+        #[serde(rename = "Position")]
+        pub position: ::std::string::String,
     }
     impl ::std::convert::From<&Employee> for Employee {
         fn from(value: &Employee) -> Self {
@@ -1342,7 +1339,7 @@ pub mod types {
             id: ::std::result::Result<i64, ::std::string::String>,
             name: ::std::result::Result<::std::string::String, ::std::string::String>,
             position: ::std::result::Result<
-                ::std::option::Option<::std::string::String>,
+                ::std::string::String,
                 ::std::string::String,
             >,
         }
@@ -1351,7 +1348,7 @@ pub mod types {
                 Self {
                     id: Err("no value supplied for id".to_string()),
                     name: Err("no value supplied for name".to_string()),
-                    position: Ok(Default::default()),
+                    position: Err("no value supplied for position".to_string()),
                 }
             }
         }
@@ -1382,7 +1379,7 @@ pub mod types {
             }
             pub fn position<T>(mut self, value: T) -> Self
             where
-                T: ::std::convert::TryInto<::std::option::Option<::std::string::String>>,
+                T: ::std::convert::TryInto<::std::string::String>,
                 T::Error: ::std::fmt::Display,
             {
                 self.position = value
@@ -4722,7 +4719,7 @@ impl Columns for types::Customer {
     const COLUMNS: &'static [&'static str] = &["CompanyName", "ID"];
 }
 impl Columns for types::Employee {
-    const COLUMNS: &'static [&'static str] = &["ID", "Name"];
+    const COLUMNS: &'static [&'static str] = &["ID", "Name", "Position"];
 }
 impl Columns for types::Job {
     const COLUMNS: &'static [&'static str] = &[

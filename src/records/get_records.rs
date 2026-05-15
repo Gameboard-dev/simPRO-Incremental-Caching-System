@@ -1,7 +1,7 @@
 use chrono::{DateTime, Months, SecondsFormat, Utc};
 
 use crate::{
-    AppState, api::types as api, parse::reference::IDs, time::TimeRangeExt,
+    AppState, api::types as api, parse::schedule::reference::IDs, time::TimeRangeExt,
     webhook::variants::Resource,
 };
 use std::sync::Arc;
@@ -150,7 +150,7 @@ impl Resource {
                 let mut bin = IDs::default();
 
                 for schedule in &schedules {
-                    schedule.parse_id_reference(&mut bin)?;
+                    bin.extend(schedule.reference_ids()?);
                 }
 
                 let mut records = vec![];
@@ -341,6 +341,7 @@ impl Resource {
     }
 
     /// # get_records_by_date
+    /// 
     /// Keeping this as a separate method from [`Resource::get_records_by_id`] avoids
     /// adding an optional date parameter, such as `None`, to every normal ID-based
     /// hydration call.
@@ -355,6 +356,7 @@ impl Resource {
     ///
     /// Using RFC3339 instead of `yyyy/mm/dd` avoids missing records created
     /// after 12AM on the (yyyy/mm/dd) computer date.
+    /// 
     #[tracing::instrument(skip(self, dates_between, app))]
     pub(crate) async fn get_records_by_date(
         &self,
@@ -389,9 +391,9 @@ impl Resource {
                 .await?;
 
                 let mut bin = IDs::default();
-
                 for schedule in &schedules {
-                    schedule.parse_id_reference(&mut bin)?;
+                    // Modify `bin` in place to extend each Vec<i64> with referenced record IDs
+                    bin.extend(schedule.reference_ids()?);
                 }
 
                 let mut records = vec![];
@@ -400,7 +402,6 @@ impl Resource {
                     if ids.is_empty() {
                         continue;
                     }
-
                     records.extend(Box::pin(resource.get_records_by_id(ids, app.clone())).await?);
                 }
 

@@ -1,7 +1,8 @@
 -- derived from Schedules
 CREATE TABLE employees (
     id BIGINT PRIMARY KEY,
-    name TEXT NOT NULL
+    name TEXT NOT NULL,
+    position TEXT NOT NULL
 );
 
 CREATE TABLE sites (
@@ -108,7 +109,7 @@ CREATE TABLE quote_schedules (
     schedule_id BIGINT NOT NULL REFERENCES schedules (id),
     quote_id BIGINT NOT NULL REFERENCES quotes (id),
     cost_center_id BIGINT NOT NULL REFERENCES cost_centers (id),
-    PRIMARY KEY (schedule_id, quote_id)
+    PRIMARY KEY (schedule_id, quote_id, cost_center_id)
 );
 
 -- junction table
@@ -119,10 +120,68 @@ CREATE TABLE lead_schedules (
 );
 
 CREATE TABLE schedule_blocks (
-    -- idx will be skipped in `diesel_cli_ext -- skip-fields`
-    idx BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     schedule_id BIGINT NOT NULL REFERENCES schedules (id),
     iso8601_end_time TIMESTAMP WITH TIME ZONE NOT NULL,
     iso8601_start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    schedule_rate BIGINT NOT NULL REFERENCES schedule_rates (id)
+    schedule_rate BIGINT NOT NULL REFERENCES schedule_rates (id),
+    PRIMARY KEY (schedule_id, iso8601_start_time, iso8601_end_time)
+);
+
+
+CREATE SCHEMA IF NOT EXISTS projections;
+CREATE OR REPLACE VIEW projections.engineer_events AS
+(
+    SELECT
+        sb.schedule_id,
+        sb.iso8601_start_time,
+        sb.iso8601_end_time,
+
+        e.id AS employee_id,
+        e.name AS employee_name,
+        e.position AS employee_position,
+
+        NOT (e.position ILIKE '%install%') AS is_core_engineer,
+
+        js.job_id,
+        qs.quote_id,
+        ls.lead_id,
+        acts.activity_id,
+
+        js.cost_center_id AS job_cost_center_id,
+        qs.cost_center_id AS quote_cost_center_id,
+
+        j.site_id,
+        jst.name AS status,
+        j.name AS project
+
+    FROM schedule_blocks sb
+
+        INNER JOIN schedules s
+            ON s.id = sb.schedule_id
+
+        INNER JOIN employees e
+            ON e.id = s.staff_id
+
+        LEFT JOIN job_schedules js
+            ON js.schedule_id = s.id
+
+        LEFT JOIN jobs j
+            ON j.id = js.job_id
+
+        LEFT JOIN job_statuses jst
+            ON jst.id = j.status_id
+
+        LEFT JOIN sites st
+            ON st.id = j.site_id
+
+        LEFT JOIN quote_schedules qs
+            ON qs.schedule_id = s.id
+
+        LEFT JOIN lead_schedules ls
+            ON ls.schedule_id = s.id
+
+        LEFT JOIN activity_schedules acts
+            ON acts.schedule_id = s.id
+
+    WHERE e.position ILIKE '%engineer%'
 );

@@ -224,9 +224,15 @@ pub(crate) fn read_init_sql(root: &Path) -> anyhow::Result<String> {
 /// * Returns an error if Docker fails to start the container or the command inside
 ///   the container exits unsuccessfully.
 pub(crate) fn run_tools_shell(config: &PostgresConfig, script: &str, action: &str) -> anyhow::Result<()> {
+    let uid: u32 = nix::unistd::Uid::current().as_raw();
+    let gid: u32 = nix::unistd::Gid::current().as_raw();
+
     run(
         Command::new("docker").current_dir(&config.root).args([
             "run",
+            // Run container as host user/group so generated files are writable.
+            "--user",
+            &format!("{uid}:{gid}"),
             // `--rm` removes the tools container after the command finishes.
             "--rm",
             // `--network` attaches it to the same Docker network as PostgreSQL.
@@ -241,7 +247,7 @@ pub(crate) fn run_tools_shell(config: &PostgresConfig, script: &str, action: &st
             // `--env DATABASE_URL=...` provides the database connection string to Diesel.
             "--env",
             &format!("DATABASE_URL={}", config.database_url()),
-            // The fixed name of the image the container will use ("simpro-schema-tools")
+            // The fixed name of the image the container will use.
             DOCKER_IMAGE,
             // `sh -c "<script>"` runs the supplied shell command
             "sh",
@@ -251,7 +257,6 @@ pub(crate) fn run_tools_shell(config: &PostgresConfig, script: &str, action: &st
         action,
     )
 }
-
 /// Executes a `psql` command inside a running PostgreSQL container.
 /// * This assumes PGSQL is running and ready to accept commands.
 ///

@@ -6,9 +6,12 @@ use crate::AppState;
 use crate::api::types as api;
 use crate::db;
 use crate::db::insertables;
+use crate::parse::into_rows::prepare_schedule_rows;
+use crate::parse::schedule::reference::ScheduleReference;
 use crate::records::get_records::Records;
 use crate::webhook::variants::Resource;
 use diesel::ExpressionMethods;
+use diesel::sql_query;
 use diesel_async::AsyncConnection;
 use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
@@ -43,109 +46,111 @@ impl Resource {
         connection: &mut Object<AsyncPgConnection>,
     ) -> anyhow::Result<()> {
         match records {
+
             Records::Schedule(records) => {
-                use crate::db::table::schedules::dsl::*;
 
-                let rows: Vec<insertables::NewSchedule<'_>> = records
-                    .iter()
-                    .map(insertables::NewSchedule::try_from)
-                    .collect::<Result<Vec<_>, _>>()?;
+                let rows = prepare_schedule_rows(&records)?;
 
-                diesel::insert_into(schedules)
-                    .values(rows)
-                    .on_conflict(id)
-                    .do_update()
-                    .set(to_update!(date_modified, staff_id, schedule_type, notes))
-                    .execute(connection)
+                sql_query("BEGIN")
+                    .execute(&mut *connection)
                     .await?;
+
+                let result: anyhow::Result<()> = async {
+                    insert_schedules(
+                        &rows.schedules,
+                        connection,
+                    )
+                    .await?;
+                    associate_job_schedules(
+                        &rows.job_schedules,
+                        connection,
+                    )
+                    .await?;
+                    associate_lead_schedules(
+                        &rows.lead_schedules,
+                        connection,
+                    )
+                    .await?;
+                    associate_quote_schedules(
+                        &rows.quote_schedules,
+                        connection,
+                    )
+                    .await?;
+                    associate_activity_schedules(
+                        &rows.activity_schedules,
+                        connection,
+                    )
+                    .await?;
+                    upsert_schedule_blocks(
+                        &rows.schedule_blocks,
+                        connection,
+                    )
+                    .await?;
+
+                    Ok(())
+                }
+                .await;
+
+                match result {
+                    Ok(()) => {
+                        sql_query("COMMIT")
+                            .execute(&mut *connection)
+                            .await?;
+                    }
+                    Err(err) => {
+                        let _ = sql_query("ROLLBACK")
+                            .execute(&mut *connection)
+                            .await;
+                        return Err(err);
+                    }
+                }
             }
+
             Records::Job(records) => {
-                let connection: &mut AsyncPgConnection = &mut **connection;
+                let rows = prepare_job_rows(&records)?;
+
+                sql_query("BEGIN")
+                    .execute(&mut *connection)
+                    .await?;
+
                 // ------------------------------------------------------------------------------------------------
-                // Lightweight nested metadata in `Job` contains the small subset of fields required 
-                // by the local schema, so issuing additional API requests for full Job Status or Customer 
+                // Lightweight nested metadata in `Job` contains the small subset of fields required
+                // by the local schema, so issuing additional API requests for full Job Status or Customer
                 // resources would add unnecessary network overhead without providing additional persistence value.
                 //
-                // Job-related tables are then written inside a single atomic (all or nothing) SQL transaction.
+                // Job-related tables are written inside a single atomic (all or nothing) SQL transaction.
                 // ------------------------------------------------------------------------------------------------
-                connection
-                    .transaction::<_, anyhow::Error, _>(async move |conn| {
-                        // -----------------------------> JOB STATUSES
-                        {
-                            use crate::db::table::job_statuses::dsl::*;
-                            // ------------------------------------------------------------------------------------
-                            let mut rows = records
-                                .iter()
-                                .map(|job| insertables::NewJobStatuse::try_from(&job.status))
-                                .collect::<Result<Vec<_>, _>>()?;
-                            // ------------------------------------------------------------------------------------
-                            // The simPRO API returns unique records but this will return duplicate rows
-                            // for multiple jobs with the same nested reference object (e.g. `Job.Customer`).
-                            //
-                            // Deduplication is done once sorted with [`Vec::sort_by_key`]
-                            // as [`Vec::dedup_by_key`] only removes consecutive duplicates.
-                            // ------------------------------------------------------------------------------------
-                            rows.sort_by_key(|row| row.id);
-                            rows.dedup_by_key(|row| row.id);
-                            // ------------------------------------------------------------------------------------
-                            diesel::insert_into(job_statuses)
-                                .values(rows)
-                                .on_conflict(id)
-                                .do_update()
-                                .set(to_update!(name, color))
-                                .execute(&mut *conn)
-                                .await?;
-                        }
-                        // -----------------------------> JOB CUSTOMERS
-                        {
-                            use crate::db::table::company_customers::dsl::*;
-                            // ------------------------------------------------------------------------------------
-                            let mut rows = records
-                                .iter()
-                                .map(insertables::NewCompanyCustomer::try_from)
-                                .collect::<Result<Vec<_>, _>>()?;
-                            // ------------------------------------------------------------------------------------
-                            rows.sort_by_key(|row| row.id);
-                            rows.dedup_by_key(|row| row.id);
-                            // ------------------------------------------------------------------------------------
-                            diesel::insert_into(company_customers)
-                                .values(rows)
-                                .on_conflict(id)
-                                .do_update()
-                                .set(company_name.eq(diesel::upsert::excluded(company_name)))
-                                .execute(&mut *conn)
-                                .await?;
-                        }
-                        // -----------------------------> JOBS
-                        {
-                            use crate::db::table::jobs::dsl::*;
-                            // ------------------------------------------------------------------------------------
-                            let rows = records
-                                .iter()
-                                .map(insertables::NewJob::try_from)
-                                .collect::<Result<Vec<_>, _>>()?;
-                            // ------------------------------------------------------------------------------------
-                            diesel::insert_into(jobs)
-                                .values(rows)
-                                .on_conflict(id)
-                                .do_update()
-                                .set(to_update!(
-                                    name,
-                                    customer_id,
-                                    date_modified,
-                                    description,
-                                    site_id,
-                                    stage,
-                                    status_id,
-                                    job_type
-                                ))
-                                .execute(&mut *conn)
-                                .await?;
-                        }
-
-                        Ok(())
-                    })
+                let result: anyhow::Result<()> = async {
+                    insert_job_statuses(
+                        &rows.job_statuses,
+                        connection,
+                    )
                     .await?;
+                    insert_company_customers(
+                        &rows.company_customers,
+                        connection,
+                    )
+                    .await?;
+                    insert_jobs(&rows.jobs, connection)
+                        .await?;
+
+                    Ok(())
+                }
+                .await;
+
+                match result {
+                    Ok(()) => {
+                        sql_query("COMMIT")
+                            .execute(&mut *connection)
+                            .await?;
+                    }
+                    Err(err) => {
+                        let _ = sql_query("ROLLBACK")
+                            .execute(&mut *connection)
+                            .await;
+                        return Err(err);
+                    }
+                }
             }
             Records::Site(records) => {
                 use crate::db::table::sites::dsl::*;
@@ -258,4 +263,267 @@ impl Resource {
 
         Ok(())
     }
+}
+
+async fn insert_schedules(
+    rows: &[insertables::NewSchedule<'_>],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::schedules::dsl::*;
+
+    diesel::insert_into(schedules)
+        .values(rows)
+        .on_conflict(id)
+        .do_update()
+        .set(to_update!(
+            date_modified,
+            staff_id,
+            schedule_type,
+            notes
+        ))
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+async fn associate_job_schedules(
+    rows: &[insertables::NewJobSchedule],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::job_schedules::dsl::*;
+
+    diesel::insert_into(job_schedules)
+        .values(rows)
+        .on_conflict((schedule_id, job_id, cost_center_id))
+        .do_nothing()
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+async fn associate_lead_schedules(
+    rows: &[insertables::NewLeadSchedule],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::lead_schedules::dsl::*;
+
+    diesel::insert_into(lead_schedules)
+        .values(rows)
+        .on_conflict((schedule_id, lead_id))
+        .do_nothing()
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+async fn associate_quote_schedules(
+    rows: &[insertables::NewQuoteSchedule],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::quote_schedules::dsl::*;
+
+    diesel::insert_into(quote_schedules)
+        .values(rows)
+        .on_conflict((schedule_id, quote_id))
+        .do_update()
+        .set(
+            cost_center_id.eq(diesel::upsert::excluded(
+                cost_center_id,
+            )),
+        )
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+async fn associate_activity_schedules(
+    rows: &[insertables::NewActivitySchedule],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::activity_schedules::dsl::*;
+
+    diesel::insert_into(activity_schedules)
+        .values(rows)
+        .on_conflict((schedule_id, activity_id))
+        .do_nothing()
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+async fn upsert_schedule_blocks(
+    rows: &[insertables::NewScheduleBlock],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::schedule_blocks::dsl::*;
+
+    diesel::insert_into(schedule_blocks)
+        .values(rows)
+        .on_conflict((
+            schedule_id,
+            iso8601_start_time,
+            iso8601_end_time,
+        ))
+        .do_update()
+        .set(to_update!(schedule_rate))
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+struct JobRows<'a> {
+    job_statuses: Vec<insertables::NewJobStatuse<'a>>,
+    company_customers:
+        Vec<insertables::NewCompanyCustomer<'a>>,
+    jobs: Vec<insertables::NewJob<'a>>,
+}
+
+fn prepare_job_rows(
+    records: &[api::Job],
+) -> anyhow::Result<JobRows<'_>> {
+
+    let mut statuses = records
+        .iter()
+        .map(|job| {
+            insertables::NewJobStatuse::try_from(
+                &job.status,
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // ------------------------------------------------------------------------------------
+    // The simPRO API returns unique records but this will return duplicate rows
+    // for multiple jobs with the same nested reference object (e.g. `Job.Customer`).
+    //
+    // Deduplication is achieved once sorted with [`Vec::sort_by_key`]
+    // because [`Vec::dedup_by_key`] only removes consecutive duplicates.
+    // ------------------------------------------------------------------------------------
+    statuses.sort_by_key(|row| row.id);
+    statuses.dedup_by_key(|row| row.id);
+
+    let mut customers = records
+        .iter()
+        .map(insertables::NewCompanyCustomer::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    customers.sort_by_key(|row| row.id);
+    customers.dedup_by_key(|row| row.id);
+
+    let jobs = records
+        .iter()
+        .map(insertables::NewJob::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(JobRows {
+        job_statuses: statuses,
+        company_customers: customers,
+        jobs,
+    })
+}
+
+async fn insert_job_statuses(
+    rows: &[insertables::NewJobStatuse<'_>],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::job_statuses::dsl::*;
+
+    diesel::insert_into(job_statuses)
+        .values(rows)
+        .on_conflict(id)
+        .do_update()
+        .set(to_update!(name, color))
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+async fn insert_company_customers(
+    rows: &[insertables::NewCompanyCustomer<'_>],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::company_customers::dsl::*;
+
+    diesel::insert_into(company_customers)
+        .values(rows)
+        .on_conflict(id)
+        .do_update()
+        .set(
+            company_name
+                .eq(diesel::upsert::excluded(company_name)),
+        )
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
+}
+
+async fn insert_jobs(
+    rows: &[insertables::NewJob<'_>],
+    connection: &mut Object<AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+
+    use crate::db::table::jobs::dsl::*;
+
+    diesel::insert_into(jobs)
+        .values(rows)
+        .on_conflict(id)
+        .do_update()
+        .set(to_update!(
+            name,
+            customer_id,
+            date_modified,
+            description,
+            site_id,
+            stage,
+            status_id,
+            job_type
+        ))
+        .execute(&mut *connection)
+        .await?;
+
+    Ok(())
 }
