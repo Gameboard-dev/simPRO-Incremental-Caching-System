@@ -1,8 +1,6 @@
 use chrono::{DateTime, Utc};
 use diesel::QueryableByName;
-use diesel::sql_types::{
-    BigInt, Nullable, Text, Timestamptz,
-};
+use diesel::sql_types::{BigInt, Nullable, Text, Timestamptz};
 
 #[derive(Debug, QueryableByName)]
 pub(crate) struct EngineerEventRow {

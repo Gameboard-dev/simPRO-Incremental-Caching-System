@@ -1,8 +1,11 @@
-use chrono::{DateTime, Months, SecondsFormat, Utc};
-
 use crate::{
-    AppState, api::types as api, parse::schedule::reference::IDs, time::TimeRangeExt,
+    AppState, api::types as api, parse::schedule::reference::IdBin, utils::time::TimeRangeExt,
     webhook::variants::Resource,
+};
+use chrono::{DateTime, Months, SecondsFormat, Utc};
+use diesel_async::{
+    AsyncPgConnection,
+    pooled_connection::{AsyncDieselConnectionManager, deadpool::Object},
 };
 use std::sync::Arc;
 
@@ -15,7 +18,7 @@ pub(crate) const PAGE_SIZE: i64 = 250;
 ///
 /// This helper keeps requesting pages until the endpoint returns fewer than [`PAGE_SIZE`]
 /// records, which indicates that the final page has been reached.
-/// 
+///
 /// It accepts a closure which determines how pages are fetched
 /// via the requisite Progenator builder method.
 ///
@@ -82,7 +85,7 @@ impl Records {
 
 impl Resource {
     /// # get_records_by_id
-    /// 
+    ///
     /// Fetches records from simPRO by their resource IDs and hydrates any
     /// dependent records required for database upsertion.
     ///
@@ -102,7 +105,7 @@ impl Resource {
     /// and the resulting records are returned in database dependency order for upsertion.
     ///
     /// The equivalent query can be tested in the Linux shell using:
-    /// 
+    ///
     /// ```bash
     /// curl -sS \
     ///   --request GET \
@@ -110,8 +113,8 @@ impl Resource {
     ///   --header "Authorization: Bearer $SIMPRO_API_KEY" \
     ///   | jq
     /// ```
-    /// 
-    /// Note that deduplication of IDs is not required here because the simPRO API will 
+    ///
+    /// Note that deduplication of IDs is not required here because the simPRO API will
     /// return only unique records even if duplicate records are requested (e.g., with ID=in(157,157))
     #[allow(unused)]
     #[tracing::instrument(skip(self, ids, app))]
@@ -147,7 +150,7 @@ impl Resource {
                 })
                 .await?;
 
-                let mut bin = IDs::default();
+                let mut bin = IdBin::default();
 
                 for schedule in &schedules {
                     bin.extend(schedule.reference_ids()?);
@@ -341,7 +344,7 @@ impl Resource {
     }
 
     /// # get_records_by_date
-    /// 
+    ///
     /// Keeping this as a separate method from [`Resource::get_records_by_id`] avoids
     /// adding an optional date parameter, such as `None`, to every normal ID-based
     /// hydration call.
@@ -356,7 +359,7 @@ impl Resource {
     ///
     /// Using RFC3339 instead of `yyyy/mm/dd` avoids missing records created
     /// after 12AM on the (yyyy/mm/dd) computer date.
-    /// 
+    ///
     #[tracing::instrument(skip(self, dates_between, app))]
     pub(crate) async fn get_records_by_date(
         &self,
@@ -365,7 +368,7 @@ impl Resource {
     ) -> anyhow::Result<Vec<Records>> {
         use crate::api::Columns;
 
-        let (start, end) = dates_between.to_rfc3339(SecondsFormat::Secs, true);
+        let (start, end) = dates_between.to_format("%Y-%m-%d");
         let dates_between = format!("between({},{})", start, end);
 
         let records = match self {
@@ -390,21 +393,23 @@ impl Resource {
                 })
                 .await?;
 
-                let mut bin = IDs::default();
+                let mut id_bin = IdBin::default();
+
                 for schedule in &schedules {
                     // Modify `bin` in place to extend each Vec<i64> with referenced record IDs
-                    bin.extend(schedule.reference_ids()?);
+                    id_bin.extend(schedule.reference_ids()?);
                 }
 
                 let mut records = vec![];
 
-                for (ids, resource) in bin.resources() {
+                for (ids, resource) in id_bin.resources() {
                     if ids.is_empty() {
                         continue;
                     }
                     records.extend(Box::pin(resource.get_records_by_id(ids, app.clone())).await?);
                 }
 
+                // Ensure schedules are upserted last
                 records.push(Records::Schedule(schedules));
                 records
             }
@@ -416,58 +421,4 @@ impl Resource {
 
         Ok(records)
     }
-}
-
-/// Returns a `(start, end)` [`DateTime<Utc>`] tuple as a time range.
-pub(crate) fn time_range(
-    base: DateTime<Utc>,
-    sub_months: u32,
-    add_months: u32,
-) -> (DateTime<Utc>, DateTime<Utc>) {
-    let start: DateTime<Utc> = base
-        .checked_sub_months(Months::new(sub_months))
-        .expect("Invalid start date");
-
-    let end: DateTime<Utc> = base
-        .checked_add_months(Months::new(add_months))
-        .expect("invalid end date");
-
-    return (start, end);
-}
-
-/// Webhook delivery is incremental and only captures events that occur
-/// after the service begins listening. On startup, the local cache may
-/// be missing historical schedules and their dependent records
-/// (Jobs, Sites, Employees, Activities, Quotes, Leads, etc.).
-///
-/// This bootstrap step seeds the database before the normal webhook-based
-/// incremental synchronization loop begins, retrieving all schedules created
-/// or modified within the last calendar month up to the current UTC timestamp,
-/// and persisting all related records into the database.
-///
-/// How does simPRO pagination work?
-///
-/// ### Documentation
-/// * [API Operators](https://developer.simprogroup.com/apidoc/?page=ff7c0fcd6a31e735a61c001f75426961#tag/Search-resources)
-/// * [GET Schedules API](https://developer.simprogroup.com/apidoc/?page=ccdb7bf9d93e5652b57cabcc8c41e061#tag/Schedules/operation/c81549288cc61e04c339b32a65425326)
-#[tracing::instrument(skip(app))]
-pub(crate) async fn load_initial_records(app: Arc<AppState>) -> anyhow::Result<()> {
-    use crate::records::get_records::Records;
-    use crate::webhook::variants::Resource;
-
-    let (add_months, sub_months) = (3, 3);
-    let records_batches: Vec<Records> = Resource::Schedule
-        .get_records_by_date(time_range(Utc::now(), add_months, sub_months), app.clone())
-        .await?;
-
-    let pool = app.db_connection_pool.clone();
-    let mut conn = pool.get().await?;
-    for records in records_batches {
-        records
-            .resource()
-            .upsert_records(records, &mut conn)
-            .await?;
-    }
-
-    Ok(())
 }

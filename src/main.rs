@@ -8,11 +8,13 @@ pub(crate) mod db;
 pub(crate) mod parse;
 pub(crate) mod records;
 pub(crate) mod serve;
-pub(crate) mod time;
+pub(crate) mod utils {
+    pub(crate) mod time;
+}
 pub(crate) mod webhook;
-use crate::records::get_records::load_initial_records;
-use crate::records::remove_records::IDS_DELETED;
+use crate::records::database::remove::IDS_DELETED;
 use crate::serve::serve::requests_handler;
+use crate::utils::time::time_range;
 use crate::webhook::events::{Buffer, EventBuffer};
 use crate::webhook::handler::webhook_handler;
 use crate::webhook::variants::Operation;
@@ -22,9 +24,10 @@ use axum::{
     Router,
     routing::{get, post},
 };
+use chrono::Utc;
 use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
-use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::pooled_connection::deadpool::{Object, Pool};
 use dotenvy::dotenv;
 use reqwest::Client as HttpClient;
 use reqwest::header::{AUTHORIZATION, HeaderMap};
@@ -62,10 +65,7 @@ fn build_api_client() -> anyhow::Result<ApiClient> {
     let mut headers = HeaderMap::new();
     // simPRO offers a fixed `Grant Token` which never needs to be refreshed or revalidated
     // a more complex alternative would be OAuth2 which requires a managed token lifecycle
-    headers.insert(
-        AUTHORIZATION,
-        format!("Bearer {}", require_env("SIMPRO_API_KEY")?).parse()?,
-    );
+    headers.insert(AUTHORIZATION, format!("Bearer {}", require_env("SIMPRO_API_KEY")?).parse()?);
     let http_client = HttpClient::builder()
         // Ignore HTTP(S)_PROXY environment variables inside the container.
         // Invalid proxy schemes can cause reqwest connection failures before the request is sent.
@@ -74,14 +74,8 @@ fn build_api_client() -> anyhow::Result<ApiClient> {
         .timeout(Duration::from_secs(60))
         .default_headers(headers)
         .build()?;
-    let retry_policy = ExponentialBackoff::builder()
-        .retry_bounds(Duration::from_millis(250), Duration::from_secs(10))
-        .jitter(Jitter::Bounded)
-        .base(2)
-        .build_with_max_retries(3);
-    let middleware_client: ClientWithMiddleware = ClientBuilder::new(http_client)
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build();
+    let retry_policy = ExponentialBackoff::builder().retry_bounds(Duration::from_millis(250), Duration::from_secs(10)).jitter(Jitter::Bounded).base(2).build_with_max_retries(3);
+    let middleware_client: ClientWithMiddleware = ClientBuilder::new(http_client).with(RetryTransientMiddleware::new_with_policy(retry_policy)).build();
     let base_url = format!("https://{}", require_env("SIMPRO_DOMAIN")?);
     Ok(ApiClient::new_with_client(&base_url, middleware_client))
 }
@@ -90,11 +84,7 @@ fn init_tracing(level: &str) {
     use tracing_error::ErrorLayer;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{EnvFilter, fmt};
-    tracing_subscriber::registry()
-        .with(fmt::layer())
-        .with(ErrorLayer::default())
-        .with(EnvFilter::new(level))
-        .init();
+    tracing_subscriber::registry().with(fmt::layer()).with(ErrorLayer::default()).with(EnvFilter::new(level)).init();
 }
 
 pub struct AppState {
@@ -110,14 +100,9 @@ pub struct AppState {
 pub async fn build_app_state(api: ApiClient) -> anyhow::Result<AppState> {
     let database_url = require_env("DATABASE_URL")?;
     let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
-    let webhook_events_path = PathBuf::from(
-        env::var("WEBHOOK_EVENTS_FILE").unwrap_or_else(|_| "data/webhook-events.json".to_string()),
-    );
+    let webhook_events_path = PathBuf::from(env::var("WEBHOOK_EVENTS_FILE").unwrap_or_else(|_| "data/webhook-events.json".to_string()));
     let webhook_events = EventBuffer::load_from_file(&webhook_events_path).unwrap_or_else(|err| {
-        tracing::warn!(
-            ?err,
-            "Failed to load persisted webhook events; starting empty"
-        );
+        tracing::warn!(?err, "Failed to load persisted webhook events; starting empty");
         EventBuffer::default()
     });
     Ok(AppState {
@@ -138,15 +123,32 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
     // ----------------------------------------------------------------------------
     tracing::info!("Listening on http://{address}");
     // ----------------------------------------------------------------------------
-    axum::serve(
-        TcpListener::bind(address).await?,
-        Router::new()
-            .route("/webhook/simpro", post(webhook_handler))
-            .route("/events", get(requests_handler))
-            .layer(TraceLayer::new_for_http())
-            .with_state(state),
-    )
-    .await?;
+    axum::serve(TcpListener::bind(address).await?, Router::new().route("/webhook/simpro", post(webhook_handler)).route("/events", get(requests_handler)).layer(TraceLayer::new_for_http()).with_state(state)).await?;
+    Ok(())
+}
+
+/// Webhook delivery is incremental and only captures events that occur
+/// after the service begins listening. On startup, the local cache may
+/// be missing historical schedules and their dependent records
+/// (Jobs, Sites, Employees, Activities, Quotes, Leads, etc.).
+///
+/// This bootstrap step seeds the database before the normal webhook-based
+/// incremental synchronization loop begins, retrieving all schedules created
+/// or modified within the last calendar month up to the current UTC timestamp,
+/// and persisting all related records into the database.
+#[tracing::instrument(skip(app))]
+pub(crate) async fn load_initial_records(app: Arc<AppState>) -> anyhow::Result<()> {
+    use crate::records::api::retrieval::Records;
+    use crate::webhook::variants::Resource;
+
+    let (add_months, sub_months) = (3, 3);
+    let dependency_lists: Vec<Records> = Resource::Schedule.get_records_by_date(time_range(Utc::now(), add_months, sub_months), app.clone()).await?;
+
+    let mut connection: Object<AsyncPgConnection> = app.db_connection_pool.get().await?;
+    for records in dependency_lists {
+        records.resource().upsert_records(records, &mut connection).await?;
+    }
+
     Ok(())
 }
 
@@ -159,7 +161,7 @@ async fn serve(state: Arc<AppState>) -> anyhow::Result<()> {
 ///     4. Upserted into the local PostgreSQL database
 #[instrument(skip(app))]
 async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
-    use crate::records::get_records::Records;
+    use crate::records::api::retrieval::Records;
     // --------------------------------------------------------
     let events: Buffer = app.webhook_events.snapshot();
     // --------------------------------------------------------
@@ -185,14 +187,11 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
                     // ----------------------------------------------------------------------------------------------------
                     resource.remove_records_by_id(record_ids, &mut conn).await?;
                     // ----------------------------------------------------------------------------------------------------
-                    // Add deleted IDs to a hashmap per resource to deal with the scenario where a 
+                    // Add deleted IDs to a hashmap per resource to deal with the scenario where a
                     // DELETED webhook is recieved and synchronized before the CREATED webhook is recieved.
                     // `extend` ignores duplicates because `IDS_DELETED` is a `HashSet`.
                     // ----------------------------------------------------------------------------------------------------
-                    IDS_DELETED[resource as usize]
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .extend(record_ids);
+                    IDS_DELETED[resource as usize].lock().unwrap_or_else(|e| e.into_inner()).extend(record_ids);
                     // ----------------------------------------------------------------------------------------------------
                 }
                 Operation::Created | Operation::Updated => {
@@ -202,8 +201,7 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
                     // --------------------------------------------------------------------------------
 
                     // --------------------------------------------------------------------------------
-                    let records_variants: Vec<Records> =
-                        resource.get_records_by_id(record_ids, app.clone()).await?;
+                    let records_variants: Vec<Records> = resource.get_records_by_id(record_ids, app.clone()).await?;
                     // --------------------------------------------------------
                     #[cfg(debug_assertions)]
                     tracing::debug!(?records_variants, "Upserting");
@@ -211,10 +209,7 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
                     // Database upsertion (INSERT OR UPDATE) using dependency-ordered array of record arrays
                     // --------------------------------------------------------------------------------------------
                     for records in records_variants {
-                        records
-                            .resource()
-                            .upsert_records(records, &mut conn)
-                            .await?;
+                        records.resource().upsert_records(records, &mut conn).await?;
                     }
                 }
             }
@@ -228,8 +223,7 @@ async fn sync_once(app: Arc<AppState>) -> anyhow::Result<()> {
     // attempts with the same ID snapshot idempotent.
     // --------------------------------------------------------------------
     app.webhook_events.remove_synced(&events);
-    app.webhook_events
-        .persist_to_file(&app.webhook_events_path)?;
+    app.webhook_events.persist_to_file(&app.webhook_events_path)?;
     Ok(())
 }
 
@@ -272,8 +266,7 @@ async fn main() -> anyhow::Result<()> {
     load_initial_records(app_state.clone()).await?;
     // ------------------------------------------------------
     let seconds: u64 = require_env("DATABASE_SYNC_INTERVAL")?.parse::<u64>()?;
-    let sync_task: JoinHandle<()> =
-        tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));
+    let sync_task: JoinHandle<()> = tokio::spawn(sync_worker(app_state.clone(), Duration::from_secs(seconds)));
     // ------------------------------------------------------
     serve(app_state).await?;
     // ------------------------------------------------------

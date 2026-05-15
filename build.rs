@@ -24,9 +24,7 @@
 use std::fs;
 
 const OPENAPI_YAML: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/openapi.yaml");
-
 const API_RS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/api.rs");
-
 const BUILD_CACHE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/target/build-cache.json");
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]

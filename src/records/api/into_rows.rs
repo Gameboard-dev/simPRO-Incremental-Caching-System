@@ -2,11 +2,12 @@
 //! into database row insertions (Diesel Insertables)
 
 use crate::api::types as api;
-use crate::db::{self, insertables};
 use crate::db::insertables::*;
 use crate::db::models::CompanyCustomer;
 use crate::db::table::*;
+use crate::db::{self, insertables};
 use crate::parse::schedule::reference::ScheduleReference;
+use crate::utils::time::rfc3339_utc;
 use crate::webhook::variants::Resource;
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, FixedOffset, Utc};
@@ -35,10 +36,6 @@ impl From<api::JobType> for db::enums::JobType {
     }
 }
 
-/// We use the lightweight CompanyCustomer reference object in the simPRO `/jobs` response.
-/// Currently we only need the customer name, so additional lookup is unnecessary.
-/// This logic is needed to normalize customers across the database
-/// and to ensure referenced customers are added before jobs reference them.
 impl<'a> TryFrom<&'a api::Job> for NewCompanyCustomer<'a> {
     type Error = anyhow::Error;
     fn try_from(job: &'a api::Job) -> anyhow::Result<Self> {
@@ -65,7 +62,7 @@ impl<'a> TryFrom<&'a api::Schedule> for NewSchedule<'a> {
     fn try_from(record: &'a api::Schedule) -> anyhow::Result<Self> {
         Ok(Self {
             id: record.id,
-            date_modified: DateTime::parse_from_rfc3339(&record.date_modified)?.with_timezone(&Utc),
+            date_modified: rfc3339_utc(&record.date_modified)?,
             notes: Some(&record.notes),
             staff_id: record.staff.id,
             schedule_type: record.type_.into(),
@@ -77,8 +74,8 @@ impl<'a> TryFrom<(i64, &api::ScheduleBlock)> for NewScheduleBlock {
     type Error = anyhow::Error;
     fn try_from((schedule_id, block): (i64, &api::ScheduleBlock)) -> anyhow::Result<Self> {
         Ok(Self {
-            iso8601_start_time: DateTime::parse_from_rfc3339(&block.iso8601_start_time)?.with_timezone(&Utc),
-            iso8601_end_time: DateTime::parse_from_rfc3339(&block.iso8601_end_time)?.with_timezone(&Utc),
+            iso8601_start_time: rfc3339_utc(&block.iso8601_start_time)?,
+            iso8601_end_time: rfc3339_utc(&block.iso8601_end_time)?,
             schedule_id,
             schedule_rate: block.schedule_rate.id,
         })
@@ -174,9 +171,7 @@ impl<'a> TryFrom<&'a api::Site> for NewSite<'a> {
             address_city: Some(&record.address.city),
             address_country: Some(&record.address.country),
             address_postal_code: &record.address.postal_code,
-            date_modified: Some(
-                DateTime::parse_from_rfc3339(&record.date_modified)?.with_timezone(&Utc),
-            ),
+            date_modified: Some(rfc3339_utc(&record.date_modified)?),
         })
     }
 }
@@ -190,7 +185,7 @@ impl<'a> TryFrom<&'a api::Job> for NewJob<'a> {
 
             customer_id: record.customer.id,
 
-            date_modified: DateTime::parse_from_rfc3339(&record.date_modified)?.with_timezone(&Utc),
+            date_modified: rfc3339_utc(&record.date_modified)?,
 
             description: record.description.as_deref().unwrap_or_default(),
 
@@ -248,17 +243,12 @@ impl<'a> TryFrom<(i64, i64)> for NewLeadSchedule {
 impl<'a> TryFrom<(&'a api::ScheduleBlock, i64)> for NewScheduleBlock {
     type Error = anyhow::Error;
 
-    fn try_from((record, schedule_id): (&'a api::ScheduleBlock, i64)) -> Result<Self> {
+    fn try_from((r, schedule_id): (&'a api::ScheduleBlock, i64)) -> Result<Self> {
         Ok(Self {
             schedule_id,
-
-            iso8601_start_time: DateTime::parse_from_rfc3339(&record.iso8601_start_time)?
-                .with_timezone(&Utc),
-
-            iso8601_end_time: DateTime::parse_from_rfc3339(&record.iso8601_end_time)?
-                .with_timezone(&Utc),
-
-            schedule_rate: record.schedule_rate.id,
+            iso8601_start_time: rfc3339_utc(&r.iso8601_start_time)?,
+            iso8601_end_time: rfc3339_utc(&r.iso8601_end_time)?,
+            schedule_rate: r.schedule_rate.id,
         })
     }
 }
@@ -273,7 +263,6 @@ pub(crate) struct ScheduleRows<'a> {
 }
 
 pub(crate) fn prepare_schedule_rows(records: &[api::Schedule]) -> anyhow::Result<ScheduleRows<'_>> {
-
     let mut rows = ScheduleRows {
         schedules: Vec::with_capacity(records.len()),
         job_schedules: Vec::new(),
@@ -284,54 +273,59 @@ pub(crate) fn prepare_schedule_rows(records: &[api::Schedule]) -> anyhow::Result
     };
 
     for schedule in records {
-        rows.schedules.push(insertables::NewSchedule::try_from(schedule)?);
+        rows.schedules
+            .push(insertables::NewSchedule::try_from(schedule)?);
 
         match schedule.reference_ids()? {
             ScheduleReference::Job {
                 job_id,
                 cost_center_id,
             } => {
-                rows.job_schedules.push(insertables::NewJobSchedule::try_from((
-                    schedule.id,
-                    job_id,
-                    cost_center_id,
-                ))?);
+                rows.job_schedules
+                    .push(insertables::NewJobSchedule::try_from((
+                        schedule.id,
+                        job_id,
+                        cost_center_id,
+                    ))?);
             }
 
             ScheduleReference::Lead { lead_id } => {
-                rows.lead_schedules.push(insertables::NewLeadSchedule::try_from((
-                    schedule.id,
-                    lead_id,
-                ))?);
+                rows.lead_schedules
+                    .push(insertables::NewLeadSchedule::try_from((
+                        schedule.id,
+                        lead_id,
+                    ))?);
             }
 
             ScheduleReference::Quote {
                 quote_id,
                 cost_center_id,
             } => {
-                rows.quote_schedules.push(insertables::NewQuoteSchedule::try_from((
-                    schedule.id,
-                    quote_id,
-                    cost_center_id,
-                ))?);
+                rows.quote_schedules
+                    .push(insertables::NewQuoteSchedule::try_from((
+                        schedule.id,
+                        quote_id,
+                        cost_center_id,
+                    ))?);
             }
 
             ScheduleReference::Activity { activity_id } => {
-                rows.activity_schedules.push(insertables::NewActivitySchedule::try_from((
-                    schedule.id,
-                    activity_id,
-                ))?);
+                rows.activity_schedules
+                    .push(insertables::NewActivitySchedule::try_from((
+                        schedule.id,
+                        activity_id,
+                    ))?);
             }
         }
 
         for block in &schedule.blocks {
-            rows.schedule_blocks.push(insertables::NewScheduleBlock::try_from((
-                block,
-                schedule.id,
-            ))?);
+            rows.schedule_blocks
+                .push(insertables::NewScheduleBlock::try_from((
+                    block,
+                    schedule.id,
+                ))?);
         }
     }
 
     Ok(rows)
 }
-

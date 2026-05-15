@@ -1,7 +1,7 @@
 use crate::{api::types as api, webhook::variants::Resource};
 
 #[derive(Default, Debug)]
-pub struct IDs {
+pub struct IdBin {
     pub activity_ids: Vec<i64>,
     pub lead_ids: Vec<i64>,
     pub job_ids: Vec<i64>,
@@ -9,7 +9,7 @@ pub struct IDs {
     pub quote_ids: Vec<i64>,
 }
 
-impl IDs {
+impl IdBin {
     pub fn resources(&self) -> [(&[i64], Resource); 5] {
         [
             (&self.job_ids, Resource::Job),
