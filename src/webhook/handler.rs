@@ -1,8 +1,8 @@
 use super::variants::{Operation, Resource};
-use crate::records::database::remove::ids_deleted_for_resource;
+use crate::records::database::removal::ids_deleted_for_resource;
 use crate::webhook::events::EventBuffer;
 use crate::webhook::payload::WebhookPayload;
-use crate::{AppState, records::database::remove::IDS_DELETED};
+use crate::{AppState, records::database::removal::IDS_DELETED};
 use anyhow::Context;
 use axum::{body::Bytes, extract::State, http::HeaderMap};
 use hmac::{Hmac, Mac};

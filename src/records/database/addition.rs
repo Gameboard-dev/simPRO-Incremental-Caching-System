@@ -7,8 +7,8 @@ use crate::{
     db::{self, insertables},
     parse::schedule::reference::ScheduleReference,
     records::{
-        api::{retrieval::Records, into_rows::prepare_schedule_rows},
-        database::r#macro::{in_transaction, insert_rows, upsert_api_records},
+        api::retrieval::Records,
+        database::{r#macro::{in_transaction, insert_rows, upsert_api_records}, translation::{self, prepare_schedule_rows}},
     },
     webhook::variants::Resource,
 };

@@ -276,7 +276,7 @@ pub(crate) fn prepare_schedule_rows(records: &[api::Schedule]) -> anyhow::Result
         rows.schedules
             .push(insertables::NewSchedule::try_from(schedule)?);
 
-        match schedule.reference_ids()? {
+        match schedule.parse_reference()? {
             ScheduleReference::Job {
                 job_id,
                 cost_center_id,

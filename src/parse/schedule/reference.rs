@@ -1,7 +1,7 @@
 use crate::{api::types as api, webhook::variants::Resource};
 
 #[derive(Default, Debug)]
-pub struct IdBin {
+pub struct ReferenceIDs {
     pub activity_ids: Vec<i64>,
     pub lead_ids: Vec<i64>,
     pub job_ids: Vec<i64>,
@@ -9,7 +9,7 @@ pub struct IdBin {
     pub quote_ids: Vec<i64>,
 }
 
-impl IdBin {
+impl ReferenceIDs {
     pub fn resources(&self) -> [(&[i64], Resource); 5] {
         [
             (&self.job_ids, Resource::Job),
@@ -68,7 +68,7 @@ pub enum ScheduleReference {
 }
 
 impl api::Schedule {
-    pub(crate) fn reference_ids(&self) -> anyhow::Result<ScheduleReference> {
+    pub(crate) fn parse_reference(&self) -> anyhow::Result<ScheduleReference> {
 
         fn delimit_ids(id_string: &str) -> anyhow::Result<(i64, i64)> {
             let (left, right) = id_string.split_once('-').ok_or_else(|| {

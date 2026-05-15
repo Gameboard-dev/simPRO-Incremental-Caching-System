@@ -1,6 +1,6 @@
 {
   "files.exclude": {
-    "**/mod.rs": false,
+    "**/mod.rs": true,
     "**/.env.example": false,
     "diesel.toml": true,
     "openapitools.json": true,
