@@ -1,28 +1,37 @@
 
-/// Fetch all pages from a simPRO list endpoint filtered by `ID=in(...)`.
+/// Fetch all pages from a simPRO list endpoint filtered by bounded `ID=in(...)`
+/// filters.
 /// The endpoint builder must accept the common `id`, `page`, `page_size`,
 /// `columns`, `company_id`, and `send` calls used by generated `list` requests.
 macro_rules! fetch_by_id {
-    ($app:expr, $ids:expr, $getter:ident, $record:ty, $label:literal) => {{
-        $crate::records::api::retrieval::paginate(|page| {
-            let app = $app.clone();
-            let ids = $ids.clone();
-            async move {
-                Ok(app
-                    .api
-                    .$getter()
-                    .id(ids)
-                    .page(page)
-                    .page_size($crate::records::api::retrieval::PAGE_SIZE)
-                    .columns(<$record as $crate::api::Columns>::COLUMNS.join(","))
-                    .company_id(&app.company_id)
-                    .send()
-                    .await
-                    .inspect_err(|err| tracing::error!(?err, concat!("Failed to fetch '", $label, "'")))?
-                    .into_inner())
-            }
-        })
-        .await?
+    ($app:expr, $id_filters:expr, $getter:ident, $record:ty, $label:literal) => {{
+        let mut records = Vec::new();
+
+        for id_filter in $id_filters {
+            let mut chunk_records = $crate::records::api::retrieval::paginate(|page| {
+                let app = $app.clone();
+                let id_filter = id_filter.clone();
+                async move {
+                    Ok(app
+                        .api
+                        .$getter()
+                        .id(id_filter)
+                        .page(page)
+                        .page_size($crate::records::api::retrieval::PAGE_SIZE)
+                        .columns(<$record as $crate::api::Columns>::COLUMNS.join(","))
+                        .company_id(&app.company_id)
+                        .send()
+                        .await
+                        .inspect_err(|err| tracing::error!(?err, concat!("Failed to fetch '", $label, "'")))?
+                        .into_inner())
+                }
+            })
+            .await?;
+
+            records.append(&mut chunk_records);
+        }
+
+        records
     }};
 }
 pub(crate) use fetch_by_id;

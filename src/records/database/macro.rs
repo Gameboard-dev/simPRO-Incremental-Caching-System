@@ -35,37 +35,6 @@ macro_rules! in_transaction {
 }
 pub(crate) use in_transaction;
 
-macro_rules! upsert_api_records {
-    (
-        $records:expr,
-        $connection:expr,
-        $table_mod:ident::$table:ident,
-        $insertable:ty,
-        $conflict:tt,
-        [$($update_col:ident),+ $(,)?]
-    ) => {{
-        let insertables = $records
-            .iter()
-            .map(<$insertable>::try_from)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        if insertables.is_empty() {
-            return Ok(());
-        }
-
-        use $crate::db::table::$table_mod::dsl::*;
-        
-        diesel::insert_into($table)
-            .values(&insertables)
-            .on_conflict($conflict)
-            .do_update()
-            .set(($( $update_col.eq(diesel::upsert::excluded($update_col)) ),+))
-            .execute(&mut *$connection)
-            .await?;
-    }};
-}
-pub(crate) use upsert_api_records;
-
 /// Inserts a slice of  [`diesel::Insertable`] rows and applies the requested 'ON CONFLICT' action.
 /// The macro returns early with `Ok(())` when the provided slice is empty. Otherwise it performs 
 /// `INSERT ... ON CONFLICT` against the provided table and conflict target.
@@ -123,6 +92,31 @@ macro_rules! insert_rows {
     }};
 }
 pub(crate) use insert_rows;
+
+macro_rules! upsert_api_records {
+    (
+        $records:expr,
+        $connection:expr,
+        $table_mod:ident::$table:ident,
+        $insertable:ty,
+        $conflict:tt,
+        [$($update_col:ident),+ $(,)?]
+    ) => {{
+        let insertables = $records
+            .iter()
+            .map(<$insertable>::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        $crate::records::database::r#macro::insert_rows!(
+            &insertables,
+            $connection,
+            $table_mod::$table,
+            $conflict,
+            do_update[$($update_col),+]
+        );
+    }};
+}
+pub(crate) use upsert_api_records;
 
 /// Deletes rows from one Diesel table by matching a batch of primary-key IDs.
 /// The table must live under [`crate::db::table`] and expose an `id` column in

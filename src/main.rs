@@ -214,8 +214,7 @@ async fn serve(
 pub(crate) async fn load_initial_records(
     app: Arc<AppState>,
 ) -> anyhow::Result<()> {
-    use crate::records::api::retrieval::Records;
-    use crate::webhook::variants::Resource;
+    use crate::webhook::variants::{Records, Resource};
 
     let (add_months, sub_months) = (3, 3);
     let dependency_lists: Vec<Records> =
@@ -257,7 +256,7 @@ pub(crate) async fn load_initial_records(
 async fn sync_once(
     app: Arc<AppState>,
 ) -> anyhow::Result<()> {
-    use crate::records::api::retrieval::Records;
+    use crate::webhook::variants::Records;
     // --------------------------------------------------------
     let events: Buffer =
         app.webhook_events.snapshot();

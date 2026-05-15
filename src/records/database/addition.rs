@@ -7,10 +7,9 @@ use crate::{
     db::{self, insertables},
     parse::schedule::reference::ScheduleReference,
     records::{
-        api::retrieval::Records,
-        database::{r#macro::{in_transaction, insert_rows, upsert_api_records}, translation::{self, prepare_schedule_rows}},
+        database::{r#macro::{in_transaction, insert_rows, upsert_api_records}},
     },
-    webhook::variants::Resource,
+    webhook::variants::{Records, Resource},
 };
 use diesel::ExpressionMethods;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl, pooled_connection::deadpool::Object};
@@ -122,11 +121,6 @@ async fn upsert_schedule_blocks(rows: &[insertables::NewScheduleBlock], connecti
     Ok(())
 }
 
-struct JobRows<'a> {
-    job_statuses: Vec<insertables::NewJobStatuse<'a>>,
-    company_customers: Vec<insertables::NewCompanyCustomer<'a>>,
-    jobs: Vec<insertables::NewJob<'a>>,
-}
 
 /// ------------------------------------------------------------------------------------
 /// The simPRO API returns unique records. This deduplicates flattened nested objects
@@ -140,6 +134,16 @@ where
 {
     rows.sort_by_key(key);
     rows.dedup_by_key(|row| key(row));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// Jobs Dependencies
+// ---------------------------------------------------------------------------------------------------------------------------------------
+
+struct JobRows<'a> {
+    job_statuses: Vec<insertables::NewJobStatuse<'a>>,
+    company_customers: Vec<insertables::NewCompanyCustomer<'a>>,
+    jobs: Vec<insertables::NewJob<'a>>,
 }
 
 fn prepare_job_rows(records: &[api::Job]) -> anyhow::Result<JobRows<'_>> {
@@ -170,4 +174,85 @@ async fn insert_jobs(rows: &[insertables::NewJob<'_>], connection: &mut DbConnec
         name, customer_id, date_modified, description, site_id, stage, status_id, job_type
     ]);
     Ok(())
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// Schedules Dependencies
+// ---------------------------------------------------------------------------------------------------------------------------------------
+
+pub(crate) struct ScheduleRows<'a> {
+    pub(crate) schedules: Vec<insertables::NewSchedule<'a>>,
+    pub(crate) job_schedules: Vec<insertables::NewJobSchedule>,
+    pub(crate) lead_schedules: Vec<insertables::NewLeadSchedule>,
+    pub(crate) quote_schedules: Vec<insertables::NewQuoteSchedule>,
+    pub(crate) activity_schedules: Vec<insertables::NewActivitySchedule>,
+    pub(crate) schedule_blocks: Vec<insertables::NewScheduleBlock>,
+}
+
+pub(crate) fn prepare_schedule_rows(records: &[api::Schedule]) -> anyhow::Result<ScheduleRows<'_>> {
+    let mut rows = ScheduleRows {
+        schedules: Vec::with_capacity(records.len()),
+        job_schedules: Vec::new(),
+        lead_schedules: Vec::new(),
+        quote_schedules: Vec::new(),
+        activity_schedules: Vec::new(),
+        schedule_blocks: Vec::new(),
+    };
+
+    for schedule in records {
+        rows.schedules
+            .push(insertables::NewSchedule::try_from(schedule)?);
+
+        match schedule.parse_reference()? {
+            ScheduleReference::Job {
+                job_id,
+                cost_center_id,
+            } => {
+                rows.job_schedules
+                    .push(insertables::NewJobSchedule::try_from((
+                        schedule.id,
+                        job_id,
+                        cost_center_id,
+                    ))?);
+            }
+
+            ScheduleReference::Lead { lead_id } => {
+                rows.lead_schedules
+                    .push(insertables::NewLeadSchedule::try_from((
+                        schedule.id,
+                        lead_id,
+                    ))?);
+            }
+
+            ScheduleReference::Quote {
+                quote_id,
+                cost_center_id,
+            } => {
+                rows.quote_schedules
+                    .push(insertables::NewQuoteSchedule::try_from((
+                        schedule.id,
+                        quote_id,
+                        cost_center_id,
+                    ))?);
+            }
+
+            ScheduleReference::Activity { activity_id } => {
+                rows.activity_schedules
+                    .push(insertables::NewActivitySchedule::try_from((
+                        schedule.id,
+                        activity_id,
+                    ))?);
+            }
+        }
+
+        for block in &schedule.blocks {
+            rows.schedule_blocks
+                .push(insertables::NewScheduleBlock::try_from((
+                    block,
+                    schedule.id,
+                ))?);
+        }
+    }
+
+    Ok(rows)
 }

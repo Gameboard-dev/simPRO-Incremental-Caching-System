@@ -1,4 +1,35 @@
+use crate::api::types as api;
 use strum_macros::{EnumCount, EnumIter};
+
+/// Enum of records retrieved by API endpoints
+#[derive(Debug)]
+pub(crate) enum Records {
+    Schedule(Vec<api::Schedule>),
+    CostCenter(Vec<api::CostCenter>),
+    Quote(Vec<api::Quote>),
+    Lead(Vec<api::Lead>),
+    Job(Vec<api::Job>),
+    Site(Vec<api::Site>),
+    Employee(Vec<api::Employee>),
+    Activity(Vec<api::Activity>),
+}
+
+impl Records {
+    /// Map a [`Records`] (response objects) variant 
+    /// to an indexed [`Resource`] variant
+    pub(crate) fn resource(&self) -> Resource {
+        match self {
+            Records::Schedule(_) => Resource::Schedule,
+            Records::CostCenter(_) => Resource::CostCenter,
+            Records::Quote(_) => Resource::Quote,
+            Records::Lead(_) => Resource::Lead,
+            Records::Job(_) => Resource::Job,
+            Records::Site(_) => Resource::Site,
+            Records::Employee(_) => Resource::Employee,
+            Records::Activity(_) => Resource::Activity,
+        }
+    }
+}
 
 #[repr(u8)]
 #[derive(EnumIter, EnumCount, Debug, Copy, Clone)]
@@ -35,15 +66,14 @@ pub enum Resource {
 /// Updated(id=123)      -- NOT IN EXTERNAL DATABASE
 /// Deleted(id=123)      (Webhook Timestamp)
 /// 
-/// Mitigations:
+/// ## Mitigations:
+///  DELETED -> CREATED
+///  -- Keep track of IDs deleted and ignore IDs deleted in creation
+///  -- [`crate::records::remove_records::IDS_DELETED`]
 /// 
-/// DELETED -> CREATED
-/// -- Keep track of IDs deleted and ignore IDs deleted in creation
-/// -- [`crate::records::remove_records::IDS_DELETED`]
-///
-/// UPDATED -> DELETED
-/// -- Treat missing records in responses as a strong indication of deletion
-/// 
+///  UPDATED -> DELETED
+///  -- Treat missing records in responses as a strong indication of deletion
+///  -- NOT IMPLEMENTED
 #[repr(u8)]
 #[derive(EnumIter, EnumCount, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Operation {

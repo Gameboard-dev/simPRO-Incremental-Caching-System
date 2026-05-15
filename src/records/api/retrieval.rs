@@ -1,7 +1,7 @@
 use crate::records::api::r#macro::{fetch_by_date, fetch_by_id};
 use crate::{
     AppState, api::types as api, parse::schedule::reference::ReferenceIDs, utils::time::TimeRangeExt,
-    webhook::variants::Resource,
+    webhook::variants::{Records, Resource},
 };
 use chrono::{DateTime, SecondsFormat, Utc};
 use std::sync::Arc;
@@ -9,6 +9,7 @@ use std::sync::Arc;
 /// The maximum number of results to be returned by a request (`integer [1...250]`)
 /// Values above 250 result in the error: "API query parameter should be an integer value between 1 - 250"
 pub(crate) const PAGE_SIZE: i64 = 250;
+pub(crate) const IDS_PER_REQUEST: usize = 100;
 
 /// Accepts a closure which determines how pages are fetched
 /// via the requisite Progenator builder method.
@@ -44,33 +45,19 @@ where
     Ok(all)
 }
 
-/// Enum of records retrieved by API endpoints
-#[derive(Debug)]
-pub(crate) enum Records {
-    Schedule(Vec<api::Schedule>),
-    CostCenter(Vec<api::CostCenter>),
-    Quote(Vec<api::Quote>),
-    Lead(Vec<api::Lead>),
-    Job(Vec<api::Job>),
-    Site(Vec<api::Site>),
-    Employee(Vec<api::Employee>),
-    Activity(Vec<api::Activity>),
-}
-
-impl Records {
-    /// Reverse mapping for dependency-ordered upserts
-    pub(crate) fn resource(&self) -> Resource {
-        match self {
-            Records::Schedule(_) => Resource::Schedule,
-            Records::CostCenter(_) => Resource::CostCenter,
-            Records::Quote(_) => Resource::Quote,
-            Records::Lead(_) => Resource::Lead,
-            Records::Job(_) => Resource::Job,
-            Records::Site(_) => Resource::Site,
-            Records::Employee(_) => Resource::Employee,
-            Records::Activity(_) => Resource::Activity,
-        }
-    }
+/// Formats IDs into bounded `ID=in(...)` filters for simPRO list endpoints.
+/// IDs are deduplicated before chunking so repeated references do not inflate
+/// URL length or cause duplicate records to be fetched.
+fn id_filters(ids: &[i64]) -> Vec<String> {
+    let mut ids: Vec<i64> = ids.to_vec();
+    ids.sort_unstable();
+    ids.dedup();
+    ids.chunks(IDS_PER_REQUEST)
+        .map(|chunk| {
+            let ids: Vec<String> = chunk.iter().map(|id| id.to_string()).collect();
+            format!("in({})", ids.join(","))
+        })
+        .collect()
 }
 
 /// Some records can require further resource fetches in a recursive call, so this helper
@@ -81,21 +68,23 @@ async fn fetch_pinned(resource: Resource, ids: &[i64], app: Arc<AppState>) -> an
     Box::pin(resource.get_records_by_id(ids, app)).await
 }
 
-async fn schedule_subrecords(schedules: &[api::Schedule], app: Arc<AppState>) -> anyhow::Result<Vec<Records>> {
+async fn fetch_schedule_subresources(schedules: &[api::Schedule], app: Arc<AppState>) -> anyhow::Result<Vec<Records>> {
     let mut ids = ReferenceIDs::default();
-
+    // ----------------------------------------------------------------------------------------------------
     for schedule in schedules {
         ids.extend(schedule.parse_reference()?);
     }
-
+    // ----------------------------------------------------------------------------------------------------
     let mut subrecords = vec![];
     for (ids, resource) in ids.resources() {
+        // ----------------------------------------------------------------------------------------------------
         if ids.is_empty() {
             continue;
         }
+        // ----------------------------------------------------------------------------------------------------
         subrecords.extend(fetch_pinned(resource, ids, app.clone()).await?);
     }
-
+    // ----------------------------------------------------------------------------------------------------
     Ok(subrecords)
 }
 
@@ -120,14 +109,14 @@ impl Resource {
     #[allow(unused)]
     #[tracing::instrument(skip(self, ids, app))]
     pub(crate) async fn get_records_by_id(&self, ids: &[i64], app: Arc<AppState>) -> anyhow::Result<Vec<Records>> {
-        let ids: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
-        let ids = format!("in({})", ids.join(","));
+        let id_filters = id_filters(ids);
 
         let records = match self {
             Resource::Schedule => {
-                let schedules: Vec<api::Schedule> = fetch_by_id!(app, ids, get_schedules, api::Schedule, "Schedule");
+                let schedules: Vec<api::Schedule> =
+                    fetch_by_id!(app, id_filters, get_schedules, api::Schedule, "Schedule");
                 // ----------------------------------------------------------------------------------------------------
-                let dependencies = schedule_subrecords(&schedules, app.clone()).await?;
+                let dependencies = fetch_schedule_subresources(&schedules, app.clone()).await?;
                 // ----------------------------------------------------------------------------------------------------
                 dependencies
                     .into_iter()
@@ -136,7 +125,7 @@ impl Resource {
             },
 
             Resource::Job => {
-                let jobs: Vec<api::Job> = fetch_by_id!(app, ids, get_jobs, api::Job, "Job");
+                let jobs: Vec<api::Job> = fetch_by_id!(app, id_filters, get_jobs, api::Job, "Job");
                 // --------------------------------------------------------------------------------------
                 let site_ids: Vec<i64> = jobs.iter().map(|job| job.site.id).collect();
                 // --------------------------------------------------------------------------------------
@@ -149,22 +138,40 @@ impl Resource {
             },
 
             Resource::CostCenter => {
-                vec![Records::CostCenter(fetch_by_id!(app, ids, get_cost_centers, api::CostCenter, "CostCenter"))]
+                vec![Records::CostCenter(fetch_by_id!(
+                    app,
+                    id_filters,
+                    get_cost_centers,
+                    api::CostCenter,
+                    "CostCenter"
+                ))]
             },
             Resource::Quote => {
-                vec![Records::Quote(fetch_by_id!(app, ids, get_quotes, api::Quote, "Quote"))]
+                vec![Records::Quote(fetch_by_id!(app, id_filters, get_quotes, api::Quote, "Quote"))]
             },
             Resource::Lead => {
-                vec![Records::Lead(fetch_by_id!(app, ids, get_leads, api::Lead, "Lead"))]
+                vec![Records::Lead(fetch_by_id!(app, id_filters, get_leads, api::Lead, "Lead"))]
             },
             Resource::Site => {
-                vec![Records::Site(fetch_by_id!(app, ids, get_sites, api::Site, "Site"))]
+                vec![Records::Site(fetch_by_id!(app, id_filters, get_sites, api::Site, "Site"))]
             },
             Resource::Employee => {
-                vec![Records::Employee(fetch_by_id!(app, ids, get_employees, api::Employee, "Employee"))]
+                vec![Records::Employee(fetch_by_id!(
+                    app,
+                    id_filters,
+                    get_employees,
+                    api::Employee,
+                    "Employee"
+                ))]
             },
             Resource::Activity => {
-                vec![Records::Activity(fetch_by_id!(app, ids, get_activities, api::Activity, "Activity"))]
+                vec![Records::Activity(fetch_by_id!(
+                    app,
+                    id_filters,
+                    get_activities,
+                    api::Activity,
+                    "Activity"
+                ))]
             },
         };
 
@@ -196,7 +203,7 @@ impl Resource {
             Resource::Schedule => {
                 let schedules: Vec<api::Schedule> =
                     fetch_by_date!(app, dates_between, get_schedules, api::Schedule, "Schedule");
-                let dependencies: Vec<Records> = schedule_subrecords(&schedules, app.clone()).await?;
+                let dependencies: Vec<Records> = fetch_schedule_subresources(&schedules, app.clone()).await?;
                 dependencies
                     .into_iter()
                     .chain([Records::Schedule(schedules)])
