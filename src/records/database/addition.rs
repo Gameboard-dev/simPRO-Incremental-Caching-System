@@ -7,7 +7,7 @@ use crate::{
     db::{self, insertables},
     parse::schedule::reference::ScheduleReference,
     records::{
-        database::{r#macro::{in_transaction, insert_rows, upsert_api_records}},
+        database::{r#macro::{in_transaction, insert_rows, upsert_records}},
     },
     webhook::variants::{Records, Resource},
 };
@@ -63,27 +63,27 @@ impl Resource {
                 });
             }
             Records::Site(records) => {
-                upsert_api_records!(records, connection, sites::sites, insertables::NewSite, id, [address_address, address_city, address_country, address_postal_code, date_modified]);
+                upsert_records!(records, connection, sites::sites, insertables::NewSite, id, [address_address, address_city, address_country, address_postal_code, date_modified]);
             }
 
             Records::Employee(records) => {
-                upsert_api_records!(records, connection, employees::employees, insertables::NewEmployee, id, [id, name]);
+                upsert_records!(records, connection, employees::employees, insertables::NewEmployee, id, [id, name]);
             }
 
             Records::Activity(records) => {
-                upsert_api_records!(records, connection, activities::activities, insertables::NewActivity, id, [id, name]);
+                upsert_records!(records, connection, activities::activities, insertables::NewActivity, id, [id, name]);
             }
 
             Records::CostCenter(records) => {
-                upsert_api_records!(records, connection, cost_centers::cost_centers, insertables::NewCostCenter, id, [id, name]);
+                upsert_records!(records, connection, cost_centers::cost_centers, insertables::NewCostCenter, id, [id, name]);
             }
 
             Records::Quote(records) => {
-                upsert_api_records!(records, connection, quotes::quotes, insertables::NewQuote, id, [name, id]);
+                upsert_records!(records, connection, quotes::quotes, insertables::NewQuote, id, [name, id]);
             }
 
             Records::Lead(records) => {
-                upsert_api_records!(records, connection, leads::leads, insertables::NewLead, id, [name, id]);
+                upsert_records!(records, connection, leads::leads, insertables::NewLead, id, [name, id]);
             }
         }
 

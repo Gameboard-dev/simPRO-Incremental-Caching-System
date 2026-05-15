@@ -93,7 +93,7 @@ macro_rules! insert_rows {
 }
 pub(crate) use insert_rows;
 
-macro_rules! upsert_api_records {
+macro_rules! upsert_records {
     (
         $records:expr,
         $connection:expr,
@@ -102,6 +102,8 @@ macro_rules! upsert_api_records {
         $conflict:tt,
         [$($update_col:ident),+ $(,)?]
     ) => {{
+        // Map records into rows with the
+        // translayer layer of TryInto
         let insertables = $records
             .iter()
             .map(<$insertable>::try_from)
@@ -116,7 +118,7 @@ macro_rules! upsert_api_records {
         );
     }};
 }
-pub(crate) use upsert_api_records;
+pub(crate) use upsert_records;
 
 /// Deletes rows from one Diesel table by matching a batch of primary-key IDs.
 /// The table must live under [`crate::db::table`] and expose an `id` column in
